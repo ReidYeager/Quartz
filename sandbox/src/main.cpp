@@ -8,7 +8,8 @@ public:
   SandboxApp() {}
   ~SandboxApp() {}
 
-  virtual void Init() override {}
+  virtual QuartzResult Init() override { return Quartz_Success; }
+  virtual QuartzResult Update() override { return Quartz_Success; }
   virtual void Shutdown() override {}
 };
 
