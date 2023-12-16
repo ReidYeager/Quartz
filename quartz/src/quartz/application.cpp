@@ -38,10 +38,10 @@ Application::Application()
     return;
   }
 
+  QTZ_LOG_CORE_INFO("Mainloop end. Shutting down");
+
   m_isRunning = false;
   CoreShutdown();
-
-  QTZ_LOG_CORE_INFO("Application init complete");
 }
 
 QuartzResult Application::CoreInit()
@@ -58,6 +58,8 @@ QuartzResult Application::CoreInit()
     return Quartz_Failure;
   }
 
+  m_window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
+
   return Quartz_Success;
 }
 
@@ -73,7 +75,19 @@ QuartzResult Application::MainLoop()
 
 void Application::CoreShutdown()
 {
-  Shutdown();
+  
+}
+
+void Application::OnEvent(Event& event)
+{
+  QTZ_LOG_CORE_DEBUG(event);
+
+  if (event.GetType() == Quartz::Event_Window_Close)
+  {
+    m_window->Close();
+    m_isRunning = false;
+  }
+
 }
 
 } // namespace Quartz

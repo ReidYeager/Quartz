@@ -17,7 +17,5 @@ int main()
 {
   SandboxApp app;
 
-  QTZ_LOG_INFO("Something about the app");
-
   return 0;
 }

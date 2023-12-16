@@ -16,7 +16,7 @@ public:
   virtual std::string ToString_Debug() const override
   {
     std::stringstream stream;
-    stream << "Mouse Moved to : (" << m_newX << ", " << m_newY << ")";
+    stream << "Event : Mouse Moved to : (" << m_newX << ", " << m_newY << ")";
     return stream.str();
   }
 
@@ -35,7 +35,7 @@ public:
   virtual std::string ToString_Debug() const override
   {
     std::stringstream stream;
-    stream << "Mouse scroll : (" << m_amountX << ", " << m_amountY << ")";
+    stream << "Event : Mouse scroll : (" << m_amountX << ", " << m_amountY << ")";
     return stream.str();
   }
 
@@ -64,7 +64,7 @@ public:
   virtual std::string ToString_Debug() const override
   {
     std::stringstream stream;
-    stream << "Mouse button press : (" << m_button << ")";
+    stream << "Event : Mouse button press : (" << m_button << ")";
     return stream.str();
   }
 }; // class EventMouseButtonPress
@@ -78,7 +78,7 @@ public:
   virtual std::string ToString_Debug() const override
   {
     std::stringstream stream;
-    stream << "Mouse button release : (" << m_button << ")";
+    stream << "Event : Mouse button release : (" << m_button << ")";
     return stream.str();
   }
 }; // class EventMouseButtonRelease

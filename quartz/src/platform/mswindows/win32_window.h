@@ -21,9 +21,12 @@ public:
   virtual bool GetIsValid() override { return m_platformInfo.hwnd != 0; }
 
   virtual QuartzResult Update() override;
+  virtual void Close() override;
+
   inline uint32_t GetWidth() const override { return m_width; }
   inline uint32_t GetHeight() const override { return m_height; }
   inline void SetEventCallback(const fnEventCallback& callback) override { m_fnEventCallback = callback; }
+
 
 private:
   QuartzResult Init(const WindowInitInfo& initInfo);
@@ -34,7 +37,12 @@ private:
   QuartzResult RegisterInput();
   void SetVisibility(bool visible);
 
+  friend LRESULT CALLBACK Win32InputCallback(HWND _hwnd, uint32_t _message, WPARAM _wparam, LPARAM _lparam);
+  bool PollWindowEvents();
+
+  static const char* m_windowClassName;
   bool m_isVisible = false;
+  bool m_isOpen = false;
 
   std::string m_title;
   uint32_t m_width, m_height;

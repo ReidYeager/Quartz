@@ -1,7 +1,7 @@
 #pragma once
 
 #include "quartz/core.h"
-#include "quartz/events/event.h"
+#include "quartz/events/event_all.h"
 
 namespace Quartz
 {
@@ -31,6 +31,8 @@ public:
   virtual bool GetIsValid() = 0;
 
   virtual QuartzResult Update() = 0;
+  virtual void Close() = 0;
+
   virtual uint32_t GetWidth() const = 0;
   virtual uint32_t GetHeight() const = 0;
 

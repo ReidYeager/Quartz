@@ -16,7 +16,7 @@ public:
   virtual std::string ToString_Debug() const override
   {
     std::stringstream stream;
-    stream << "Window closed";
+    stream << "Event : Window closed";
     return stream.str();
   }
 }; // class EventWindowClose
@@ -34,7 +34,7 @@ public:
   virtual std::string ToString_Debug() const override
   {
     std::stringstream stream;
-    stream << "Window resized to : (" << m_newWidth << ", " << m_newHeight << ")";
+    stream << "Event : Window resized to : (" << m_newWidth << ", " << m_newHeight << ")";
     return stream.str();
   }
 
@@ -56,7 +56,7 @@ public:
   virtual std::string ToString_Debug() const override
   {
     std::stringstream stream;
-    stream << "Window moved to : (" << m_newX << ", " << m_newY << ")";
+    stream << "Event : Window moved to : (" << m_newX << ", " << m_newY << ")";
     return stream.str();
   }
 
@@ -64,5 +64,25 @@ private:
   uint32_t m_newX;
   uint32_t m_newY;
 }; // class EventWindowMove
+
+class EventWindowFocus : public Event
+{
+public:
+  EventWindowFocus(bool isFocused) : m_focused(isFocused) {}
+  QTZ_EVENT_DEFINE_TYPE(Event_Window_Focused);
+  QTZ_EVENT_DEFINE_CATEGORIES(EventCategory_Window);
+
+  inline uint32_t GetFocused() { return m_focused; }
+
+  virtual std::string ToString_Debug() const override
+  {
+    std::stringstream stream;
+    stream << "Event : Window " << (m_focused ? "focused" : "unfocused");
+    return stream.str();
+  }
+
+private:
+  bool m_focused;
+}; // class EventWindowFocused
 
 } // namespace Quartz

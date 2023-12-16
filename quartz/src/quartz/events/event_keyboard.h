@@ -34,7 +34,7 @@ public:
   virtual std::string ToString_Debug() const override
   {
     std::stringstream stream;
-    stream << "Key pressed : (" << m_keycode << ")";
+    stream << "Event : Key pressed : " << m_keycode << " ('" << (char)m_keycode << "')";
     return stream.str();
   }
 }; // class EventKeyPress
@@ -49,7 +49,7 @@ public:
   virtual std::string ToString_Debug() const override
   {
     std::stringstream stream;
-    stream << "Key release : (" << m_keycode << ")";
+    stream << "Event : Key released : " << m_keycode << " ('" << (char)m_keycode << "')";
     return stream.str();
   }
 }; // class EventKeyRelease

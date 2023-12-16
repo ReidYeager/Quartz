@@ -7,6 +7,9 @@
 namespace Quartz
 {
 
+const char* Win32Window::m_windowClassName = "QuartzWin32WindowClass";
+Win32Window* ActiveWin32Window;
+
 Window* Window::Create(const WindowInitInfo& initInfo)
 {
   return new Win32Window(initInfo);
@@ -23,9 +26,131 @@ Win32Window::~Win32Window()
   Shutdown();
 }
 
-LRESULT CALLBACK Win32WindowProcessInputMessage(HWND _hwnd, uint32_t _message, WPARAM _wparam, LPARAM _lparam)
+LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, LPARAM lparam)
 {
-  LRESULT result = DefWindowProcA(_hwnd, _message, _wparam, _lparam);
+  LRESULT result = 0;
+
+  if (ActiveWin32Window == NULL)
+  {
+    return DefWindowProcA(hwnd, message, wparam, lparam);
+  }
+
+  switch (message)
+  {
+  // Window
+  // ===============
+  case WM_CLOSE:
+  {
+    PostQuitMessage(0);
+    EventWindowClose e;
+    ActiveWin32Window->m_fnEventCallback(e);
+    ActiveWin32Window->m_isOpen = false;
+  } break;
+  case WM_SIZE:
+  {
+    uint32_t w = LOWORD(lparam);
+    uint32_t h = HIWORD(lparam);
+    ActiveWin32Window->m_width = w;
+    ActiveWin32Window->m_height = h;
+    EventWindowResize e(w, h);
+    ActiveWin32Window->m_fnEventCallback(e);
+  } break;
+  case WM_KILLFOCUS:
+  case WM_SETFOCUS:
+  {
+    EventWindowFocus e(message == WM_SETFOCUS);
+    ActiveWin32Window->m_fnEventCallback(e);
+  } break;
+  case WM_MOVE:
+  {
+    int32_t x = LOWORD(lparam);
+    int32_t y = HIWORD(lparam);
+    EventWindowMove e(x, y);
+    ActiveWin32Window->m_fnEventCallback(e);
+  }
+
+  // Keyboard
+  // ===============
+  case WM_KEYDOWN:
+  case WM_SYSKEYDOWN:
+  {
+    // TODO : Translate the keycode to a custom value
+    EventKeyPress e(wparam);
+    ActiveWin32Window->m_fnEventCallback(e);
+  } break;
+  case WM_KEYUP:
+  case WM_SYSKEYUP:
+  {
+    // TODO : Translate the keycode to a custom value
+    EventKeyRelease e(wparam);
+    ActiveWin32Window->m_fnEventCallback(e);
+  } break;
+
+  // Mouse
+  // ===============
+  case WM_MOUSEMOVE:
+  case WM_NCMOUSEMOVE:
+  {
+    int32_t x = GET_X_LPARAM(lparam);
+    int32_t y = GET_Y_LPARAM(lparam);
+    EventMouseMove e(x, y);
+    ActiveWin32Window->m_fnEventCallback(e);
+  } break;
+  case WM_MOUSEWHEEL:
+  {
+    int32_t y = GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA;
+    EventMouseScroll e(0, y);
+    ActiveWin32Window->m_fnEventCallback(e);
+  } break;
+  case WM_MOUSEHWHEEL:
+  {
+    int32_t x = GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA;
+    EventMouseScroll e(x, 0);
+    ActiveWin32Window->m_fnEventCallback(e);
+  } break;
+  case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
+  case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
+  case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK:
+  case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK:
+  {
+    uint32_t button = 0;
+    switch (message)
+    {
+    case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK: button = 0; break;
+    case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK: button = 1; break;
+    case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK: button = 2; break;
+    case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK: button = GET_XBUTTON_WPARAM(wparam) + 2; break;
+    default: break;
+    }
+    EventMouseButtonPress e(button);
+    ActiveWin32Window->m_fnEventCallback(e);
+  } break;
+  case WM_LBUTTONUP:
+  case WM_RBUTTONUP:
+  case WM_MBUTTONUP:
+  case WM_XBUTTONUP:
+  {
+    uint32_t button = 0;
+    switch (message)
+    {
+    case WM_LBUTTONUP: button = 0; break;
+    case WM_RBUTTONUP: button = 1; break;
+    case WM_MBUTTONUP: button = 2; break;
+    case WM_XBUTTONUP: button = GET_XBUTTON_WPARAM(wparam) + 2; break;
+    default: break;
+    }
+    EventMouseButtonPress e(button);
+    ActiveWin32Window->m_fnEventCallback(e);
+  } break;
+
+  // Default
+  // ===============
+  default:
+  {
+    result = DefWindowProcA(hwnd, message, wparam, lparam);
+  }break;
+  }
+
   return result;
 }
 
@@ -36,14 +161,14 @@ QuartzResult Win32Window::RegisterWindow()
   WNDCLASSA wc;
   memset(&wc, 0, sizeof(wc));
   wc.style = CS_DBLCLKS;
-  wc.lpfnWndProc = Win32WindowProcessInputMessage;
+  wc.lpfnWndProc = Win32InputCallback;
   wc.cbClsExtra = 0;
   wc.cbWndExtra = 0;
   wc.hInstance = m_platformInfo.hinstance;
   wc.hIcon = LoadIcon(m_platformInfo.hinstance, IDI_APPLICATION);
   wc.hCursor = LoadCursor(NULL, IDC_ARROW);
   wc.hbrBackground = NULL;
-  wc.lpszClassName = "QuartzWin32WindowClass";
+  wc.lpszClassName = m_windowClassName;
   wc.lpszMenuName = NULL;
 
   int x = RegisterClassA(&wc);
@@ -71,7 +196,7 @@ QuartzResult Win32Window::CreateWindow()
 
   m_platformInfo.hwnd = CreateWindowExA(
     windowExStyle,
-    "QuartzWin32WindowClass",
+    m_windowClassName,
     m_title.c_str(),
     windowStyle,
     m_xPos, // X screen position
@@ -131,6 +256,7 @@ QuartzResult Win32Window::Init(const WindowInitInfo& initInfo)
 
   QTZ_ATTEMPT(RegisterWindow());
   QTZ_ATTEMPT(CreateWindow());
+  m_isOpen = true;
   QTZ_ATTEMPT(RegisterInput());
   SetVisibility(true);
 
@@ -141,18 +267,35 @@ QuartzResult Win32Window::Init(const WindowInitInfo& initInfo)
 
 QuartzResult Win32Window::Update()
 {
+  PollWindowEvents();
+
+  return Quartz_Success;
+}
+
+void Win32Window::Close()
+{
+  m_isOpen = false;
+  Shutdown();
+}
+
+bool Win32Window::PollWindowEvents()
+{
   MSG message;
+  ActiveWin32Window = this;
   while (PeekMessageA(&message, m_platformInfo.hwnd, 0, 0, PM_REMOVE))
   {
     TranslateMessage(&message);
     DispatchMessage(&message);
   }
-  return Quartz_Success;
+  ActiveWin32Window = nullptr;
+
+  return true;
 }
 
 void Win32Window::Shutdown()
 {
-
+  DestroyWindow(m_platformInfo.hwnd);
+  UnregisterClassA(m_windowClassName, m_platformInfo.hinstance);
 }
 
 } // namespace

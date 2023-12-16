@@ -17,6 +17,8 @@ public:
 
   inline static Application* Get() { return m_instance; }
 
+  void OnEvent(Event& event);
+
 private:
   QuartzResult CoreInit();
   QuartzResult MainLoop();
