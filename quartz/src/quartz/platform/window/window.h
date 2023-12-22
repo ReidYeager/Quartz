@@ -24,21 +24,17 @@ struct WindowInitInfo
 class Window
 {
 public:
-  using fnEventCallback = std::function<void(Event&)>;
-
   virtual ~Window() {}
 
-  virtual bool GetIsValid() = 0;
-
+  static Window* InitNew(const WindowInitInfo& initInfo = WindowInitInfo());
   virtual QuartzResult Update() = 0;
-  virtual void Close() = 0;
+  virtual void Shutdown() = 0;
 
-  virtual uint32_t GetWidth() const = 0;
-  virtual uint32_t GetHeight() const = 0;
+  virtual void SetEventCallback(const QuartzEventCallbackFunction& callback) = 0;
 
-  virtual void SetEventCallback(const fnEventCallback& callback) = 0;
-
-  static Window* Create(const WindowInitInfo& initInfo = WindowInitInfo());
+  virtual inline bool IsValid() const = 0;
+  virtual inline uint32_t Width() const = 0;
+  virtual inline uint32_t Height() const = 0;
 };
 
 } // namespace Quartz

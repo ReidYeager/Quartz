@@ -1,7 +1,7 @@
 #pragma once
 
 #include "quartz/core.h"
-#include "quartz/window.h"
+#include "quartz/platform/window/window.h"
 
 namespace Quartz {
 

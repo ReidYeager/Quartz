@@ -1,7 +1,7 @@
 
 #include "quartz.h"
 
-#include "platform/mswindows/win32_window.h"
+#include "quartz/platform/window/window.h"
 
 #include <stdio.h>
 #include <memory>
@@ -48,16 +48,17 @@ QuartzResult Application::CoreInit()
 {
   QTZ_LOG_CORE_INFO("Creating window");
   WindowInitInfo windowInfo;
-  windowInfo.title = "Quartz test app";
+  windowInfo.title = "Quartz christmas app";
   windowInfo.width = 1280;
   windowInfo.height = 720;
-  m_window = Window::Create();
-  if (!m_window->GetIsValid())
+  windowInfo.xPos = 50;
+  windowInfo.yPos = 50;
+  m_window = Window::InitNew(windowInfo);
+  if (!m_window->IsValid())
   {
     QTZ_LOG_CORE_ERROR("Failed to create the window");
     return Quartz_Failure;
   }
-
   m_window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
 
   return Quartz_Success;
@@ -84,7 +85,7 @@ void Application::OnEvent(Event& event)
 
   if (event.GetType() == Quartz::Event_Window_Close)
   {
-    m_window->Close();
+    m_window->Shutdown();
     m_isRunning = false;
   }
 

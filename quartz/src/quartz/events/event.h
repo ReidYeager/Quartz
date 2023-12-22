@@ -66,6 +66,7 @@ protected:
   bool m_handled = false;
 }; // class Event
 
+typedef std::function<void(Event&)> QuartzEventCallbackFunction;
 class EventDispatcher
 {
 public:
