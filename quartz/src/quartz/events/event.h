@@ -93,3 +93,7 @@ inline std::ostream& operator<<(std::ostream& os, const Event& e)
 }
 
 } // namespace Quartz
+
+#include "quartz/events/event_keyboard.h"
+#include "quartz/events/event_mouse.h"
+#include "quartz/events/event_window.h"

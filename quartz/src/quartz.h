@@ -5,7 +5,7 @@
 #include "quartz/application.h"
 #include "quartz/logger.h"
 
-#include "quartz/events/event_all.h"
+#include "quartz/events/event.h"
 
 // TODO : Replace platform/* with updated Lapis
 #include "quartz/platform/window/window.h"

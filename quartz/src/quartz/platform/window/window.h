@@ -1,7 +1,7 @@
 #pragma once
 
 #include "quartz/core.h"
-#include "quartz/events/event_all.h"
+#include "quartz/events/event.h"
 
 namespace Quartz
 {

@@ -30,8 +30,8 @@ private:
 #define QTZ_LOG_CORE_ERROR(...) Quartz::Logger::GetCoreLogger()->error(__VA_ARGS__)
 #define QTZ_LOG_CORE_FATAL(...) Quartz::Logger::GetCoreLogger()->critical(__VA_ARGS__)
 
-#define QTZ_LOG_INFO(...) Quartz::Logger::GetAppLogger()->trace(__VA_ARGS__)
-#define QTZ_LOG_DEBUG(...) Quartz::Logger::GetAppLogger()->info(__VA_ARGS__)
+#define QTZ_LOG_DEBUG(...) Quartz::Logger::GetAppLogger()->trace(__VA_ARGS__)
+#define QTZ_LOG_INFO(...) Quartz::Logger::GetAppLogger()->info(__VA_ARGS__)
 #define QTZ_LOG_WARNING(...) Quartz::Logger::GetAppLogger()->warn(__VA_ARGS__)
 #define QTZ_LOG_ERROR(...) Quartz::Logger::GetAppLogger()->error(__VA_ARGS__)
 #define QTZ_LOG_FATAL(...) Quartz::Logger::GetAppLogger()->critical(__VA_ARGS__)
