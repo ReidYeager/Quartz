@@ -2,6 +2,7 @@
 #include "quartz.h"
 
 #include "quartz/platform/window/window.h"
+#include "quartz/ecs/ecs.h"
 
 #include <stdio.h>
 #include <memory>
@@ -44,6 +45,21 @@ Application::Application()
   CoreShutdown();
 }
 
+struct TestA
+{
+  float x, y, z;
+};
+
+struct TestB
+{
+  int x, y, z;
+};
+
+struct TestC
+{
+  std::string name;
+};
+
 QuartzResult Application::CoreInit()
 {
   QTZ_LOG_CORE_INFO("Creating window");
@@ -61,7 +77,37 @@ QuartzResult Application::CoreInit()
   }
   m_window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
 
-  return Quartz_Success;
+  EcsWorld ecs;
+  ComponentId testAId = ecs.GetComponentId("TestA");
+  ComponentId testBId = ecs.GetComponentId("TestB");
+  ComponentId testCId = ecs.GetComponentId("TestC");
+  ecs.DefineComponent(testAId, sizeof(TestA));
+  ecs.DefineComponent(testBId, sizeof(TestB));
+  ecs.DefineComponent(testCId, sizeof(TestC));
+  Entity e = ecs.CreateEntity();
+
+
+  ecs.PrintNextEdges();
+  QTZ_LOG_CORE_INFO("Add TestA component");
+  ecs.AddComponent(e, testAId);
+  ecs.PrintNextEdges();
+  QTZ_LOG_CORE_INFO("Add TestB component");
+  ecs.AddComponent(e, testBId);
+  ecs.PrintNextEdges();
+  QTZ_LOG_CORE_INFO("Add TestC component");
+  ecs.AddComponent(e, testCId);
+  ecs.PrintNextEdges();
+
+
+  QTZ_LOG_CORE_INFO("\n");
+  ecs.PrintPrevEdges();
+  QTZ_LOG_CORE_INFO("Remove TestB component");
+  ecs.RemoveComponent(e, testCId);
+  ecs.PrintPrevEdges();
+
+
+  QTZ_LOG_CORE_FATAL("The following failure is intentional. Testing functionality.");
+  return Quartz_Failure;
 }
 
 QuartzResult Application::MainLoop()
@@ -81,7 +127,7 @@ void Application::CoreShutdown()
 
 void Application::OnEvent(Event& event)
 {
-  QTZ_LOG_CORE_DEBUG(event);
+  //QTZ_LOG_CORE_DEBUG(event);
 
   if (event.GetType() == Quartz::Event_Window_Close)
   {
