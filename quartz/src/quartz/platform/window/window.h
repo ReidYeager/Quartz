@@ -1,6 +1,8 @@
 #pragma once
 
-#include "quartz/core.h"
+#include "quartz/defines.h"
+#include "quartz/platform/platform.h"
+
 #include "quartz/events/event.h"
 
 namespace Quartz
@@ -30,6 +32,7 @@ public:
   virtual QuartzResult Update() = 0;
   virtual void Shutdown() = 0;
 
+  virtual const WindowPlatformInfo* GetPlatformInfo() = 0;
   virtual void SetEventCallback(const QuartzEventCallbackFunction& callback) = 0;
 
   virtual inline bool IsValid() const = 0;

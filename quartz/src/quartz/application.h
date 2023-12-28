@@ -1,7 +1,8 @@
 #pragma once
 
-#include "quartz/core.h"
+#include "quartz/defines.h"
 #include "quartz/platform/window/window.h"
+#include "quartz/render/render.h"
 
 namespace Quartz {
 
@@ -28,6 +29,7 @@ private:
   bool m_isRunning = false;
 
   Window* m_window;
+  Renderer m_renderer;
 };
 
 } // namespace Quartz

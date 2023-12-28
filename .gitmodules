@@ -1,3 +1,9 @@
 [submodule "quartz/vendor/spdlog"]
 	path = quartz/vendor/spdlog
 	url = https://github.com/gabime/spdlog
+[submodule "quartz/vendor/opal"]
+	path = quartz/vendor/opal
+	url = https://github.com/ReidYeager/Opal
+[submodule "quartz/vendor/peridot"]
+	path = quartz/vendor/peridot
+	url = https://github.com/ReidYeager/Peridot

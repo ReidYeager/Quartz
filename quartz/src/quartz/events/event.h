@@ -1,6 +1,6 @@
 #pragma once
 
-#include "quartz/core.h"
+#include "quartz/defines.h"
 
 #include <string>
 #include <sstream>

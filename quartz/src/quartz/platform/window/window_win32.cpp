@@ -4,8 +4,6 @@
 
 #ifdef QTZ_PLATFORM_WIN32
 
-#include <windows.h>
-#include <windowsx.h>
 #undef CreateWindow
 
 namespace Quartz
@@ -27,11 +25,7 @@ private:
 
   QuartzEventCallbackFunction m_fnEventCallback;
 
-  struct
-  {
-    HINSTANCE hinstance;
-    HWND hwnd;
-  } m_platformInfo;
+  WindowPlatformInfo m_platformInfo;
 
   // ===============
   // Functions
@@ -43,6 +37,7 @@ public:
   virtual QuartzResult Update() override;
   virtual void Shutdown() override;
 
+  virtual const WindowPlatformInfo* GetPlatformInfo() override { return &m_platformInfo; }
   virtual inline void SetEventCallback(const QuartzEventCallbackFunction& callback) override
   {
     m_fnEventCallback = callback;

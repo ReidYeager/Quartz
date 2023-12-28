@@ -9,12 +9,12 @@
 namespace Quartz
 {
 
-uint32_t attemptDepth = 0;
-Application* Application::m_instance = NULL;
+uint32_t globalFunctionCallAttemptDepth = 0;
+Application* Application::m_instance = nullptr;
 
 Application::Application()
 {
-  if (m_instance != NULL)
+  if (m_instance != nullptr)
   {
     QTZ_LOG_CORE_ERROR("Application already exists\n");
     return;
@@ -61,6 +61,8 @@ QuartzResult Application::CoreInit()
   }
   m_window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
 
+  m_renderer.Init(m_window);
+
   return Quartz_Success;
 }
 
@@ -69,6 +71,13 @@ QuartzResult Application::MainLoop()
   while (m_isRunning)
   {
     m_window->Update();
+
+    if (m_window->Width() == 0 || m_window->Height() == 0)
+      continue;
+
+    m_renderer.StartFrame();
+    m_renderer.Render();
+    m_renderer.EndFrame();
   }
 
   return Quartz_Success;
@@ -76,16 +85,22 @@ QuartzResult Application::MainLoop()
 
 void Application::CoreShutdown()
 {
-  
+  m_renderer.Shutdown();
+  m_window->Shutdown();
 }
 
 void Application::OnEvent(Event& event)
 {
-  QTZ_LOG_CORE_DEBUG(event);
+  //QTZ_LOG_CORE_DEBUG(event);
+
+  if (event.GetType() == Quartz::Event_Window_Resize)
+  {
+    EventWindowResize* resizeEvent = (EventWindowResize*)(&event);
+    m_renderer.Resize(resizeEvent->GetWidth(), resizeEvent->GetHeight());
+  }
 
   if (event.GetType() == Quartz::Event_Window_Close)
   {
-    m_window->Shutdown();
     m_isRunning = false;
   }
 

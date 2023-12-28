@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "quartz/core.h"
+#include "quartz/defines.h"
 #include "quartz/application.h"
 #include "quartz/logger.h"
 

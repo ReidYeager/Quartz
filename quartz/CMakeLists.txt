@@ -4,6 +4,8 @@ cmake_minimum_required (VERSION 3.20)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 
+find_package(Vulkan REQUIRED)
+
 add_subdirectory("vendor")
 
 file(GLOB_RECURSE HeaderFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/**.h")
@@ -18,11 +20,13 @@ target_include_directories (Quartz PUBLIC
   ./src/
   VendorQuartz
   VendorMain
+  ${Vulkan_INCLUDE_DIRS}
 )
 
 target_link_libraries(Quartz
   VendorQuartz
   VendorMain
+  ${Vulkan_LIBRARIES}/../../Lib/vulkan-1.lib
 )
 
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
