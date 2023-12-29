@@ -45,14 +45,16 @@ public:
     }
 
     m_count++;
-    return (void*)(((char*)m_data) + (m_count - 1));
+    return (void*)(((char*)m_data) + (m_elementSize * (m_count - 1)));
   }
 
   void* PopBack()
   {
-    assert(m_count > 0);
+    if (m_count == 0)
+      return nullptr;
+
     m_count--;
-    return (void*)(((char*)m_data) + (m_count));
+    return (void*)(((char*)m_data) + (m_elementSize * m_count));
   }
 
   void Resize(uint32_t newElementCount)
@@ -83,6 +85,11 @@ public:
   {
     assert(index < m_count);
     return (void*)((char*)m_data + (index * m_elementSize));
+  }
+
+  void* GetSubElement(uint32_t elementIndex, uint32_t offset)
+  {
+    return (void*)((char*)m_data + ((elementIndex * m_elementSize) + offset));
   }
 
 private:

@@ -47,17 +47,17 @@ Application::Application()
 
 struct TestA
 {
-  float x, y, z;
+  uint32_t x, y, z;
 };
 
 struct TestB
 {
-  int x, y, z;
+  int x, y;
 };
 
 struct TestC
 {
-  std::string name;
+  uint32_t x;
 };
 
 QuartzResult Application::CoreInit()
@@ -78,36 +78,50 @@ QuartzResult Application::CoreInit()
   m_window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
 
   EcsWorld ecs;
-  ComponentId testAId = ecs.GetComponentId("TestA");
-  ComponentId testBId = ecs.GetComponentId("TestB");
-  ComponentId testCId = ecs.GetComponentId("TestC");
-  ecs.DefineComponent(testAId, sizeof(TestA));
-  ecs.DefineComponent(testBId, sizeof(TestB));
-  ecs.DefineComponent(testCId, sizeof(TestC));
+  ComponentId testAId = ecs.DefineComponent("TestA", sizeof(TestA));
+  ComponentId testBId = ecs.DefineComponent("TestB", sizeof(TestB));
+  ComponentId testCId = ecs.DefineComponent("TestC", sizeof(TestC));
   Entity e = ecs.CreateEntity();
+  Entity e2 = ecs.CreateEntity();
+  Entity e3 = ecs.CreateEntity();
+  Entity e4 = ecs.CreateEntity();
 
+  TestA tmpA = { 0x11111111, 0x22222222, 0x33333333 };
+  TestA tmpA2 = { 0x44444444, 0x55555555, 0x66666666 };
+  TestA tmpA3 = { 0x77777777, 0x88888888, 0x99999999 };
+  TestA tmpA4 = { 0xaaaaaaaa, 0xbbbbbbbb, 0xcccccccc };
 
-  ecs.PrintNextEdges();
-  QTZ_LOG_CORE_INFO("Add TestA component");
-  ecs.AddComponent(e, testAId);
-  ecs.PrintNextEdges();
-  QTZ_LOG_CORE_INFO("Add TestB component");
+  ecs.SetComponent(e, testAId, &tmpA);
+  ecs.SetComponent(e2, testAId, &tmpA2);
+  ecs.SetComponent(e3, testAId, &tmpA3);
+  ecs.SetComponent(e4, testAId, &tmpA4);
+
   ecs.AddComponent(e, testBId);
-  ecs.PrintNextEdges();
-  QTZ_LOG_CORE_INFO("Add TestC component");
+  ecs.AddComponent(e2, testBId);
+  ecs.AddComponent(e3, testBId);
+  ecs.AddComponent(e4, testBId);
+
   ecs.AddComponent(e, testCId);
-  ecs.PrintNextEdges();
+  ecs.AddComponent(e3, testCId);
+  ecs.AddComponent(e4, testCId);
 
-
-  QTZ_LOG_CORE_INFO("\n");
-  ecs.PrintPrevEdges();
-  QTZ_LOG_CORE_INFO("Remove TestB component");
+  ecs.RemoveComponent(e3, testBId);
+  ecs.RemoveComponent(e, testBId);
   ecs.RemoveComponent(e, testCId);
-  ecs.PrintPrevEdges();
 
+  ecs.PrintArchOwners();
 
-  QTZ_LOG_CORE_FATAL("The following failure is intentional. Testing functionality.");
-  return Quartz_Failure;
+  EcsIterator itr(&ecs, {testAId});
+  while (!itr.AtEnd())
+  {
+    TestA* a = (TestA*)itr.GetComponent(testAId);
+
+    QTZ_LOG_WARNING("{}:{} {:x}, {:x}, {:x}", itr.CurrentEntity(), fmt::ptr(a), a->x, a->y, a->z);
+
+    itr.StepNextElement();
+  }
+
+  return Quartz_Success;
 }
 
 QuartzResult Application::MainLoop()

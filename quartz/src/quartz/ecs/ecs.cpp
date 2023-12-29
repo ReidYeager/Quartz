@@ -65,6 +65,8 @@ Entity EcsWorld::CreateEntity()
   record->archetype = &m_archetypes[0];
   record->index = 0;
 
+  record->archetype->owningEntities.push_back(m_nextEntity);
+
   return m_nextEntity++;
 }
 
@@ -77,37 +79,47 @@ void EcsWorld::DestroyEntity(Entity e)
 // Component
 // ==========================================================================================
 
-void EcsWorld::DefineComponent(ComponentId id, uint32_t size)
+ComponentId EcsWorld::DefineComponent(const char* name, uint32_t size)
 {
+  ComponentId id = GetComponentId(name);
+  m_componentNames[id] = std::string(name);
   m_componentSizes[id] = size;
+
+  return id;
 }
 
-void EcsWorld::AddComponent(Entity e, ComponentId id)
+void* EcsWorld::AddComponent(Entity e, ComponentId id)
 {
   EcsRecord* record = &m_records[e];
   EcsArchetype* src = record->archetype;
   EcsArchetype* dst = GetArchetypeNext(record->archetype, id);
-  uint32_t srcIndex = record->index;
+  uint32_t srcElementIndex = record->index;
+  uint32_t dstElementIndex = dst->componentData.elementCount();
 
   record->archetype = dst;
-  record->index = dst->componentData.elementCount();
+  record->index = dstElementIndex;
 
-  if (src->componentData.elementCount() == 0)
-    return;
+  dst->owningEntities.push_back(e);
+  void* dstData = dst->componentData.PushBack();
 
   // Copy data to next archetype
-  void* srcData = src->componentData[srcIndex];
-  void* dstData = dst->componentData.PushBack();
+  void* srcData = nullptr;
+  if (src->componentData.elementCount() > 0)
+  {
+    srcData = src->componentData[srcElementIndex];
+  }
+  uint32_t srcIndex = 0, dstIndex = 0;
   uint32_t srcOffset = 0, dstOffset = 0;
   uint32_t curSize = 0;
-  for (uint32_t i = 0; i < dst->componentIds.size(); i++)
+  for (; dstIndex < dst->componentIds.size();)
   {
-    curSize = m_componentSizes[dst->componentIds[i]];
+    curSize = m_componentSizes[dst->componentIds[dstIndex]];
 
-    if (src->componentIds[i] != dst->componentIds[i])
+    if (srcIndex >= src->componentIds.size() || src->componentIds[srcIndex] != dst->componentIds[dstIndex])
     {
       memset(((char*)dstData) + dstOffset, 0, curSize);
       dstOffset += curSize;
+      dstIndex++;
       continue;
     }
 
@@ -115,17 +127,46 @@ void EcsWorld::AddComponent(Entity e, ComponentId id)
 
     srcOffset += curSize;
     dstOffset += curSize;
+    srcIndex++;
+    dstIndex++;
   }
 
-  dst->owningEntities.push_back(e);
-
   // Remove entity from src archetype
-  void* srcBack = src->componentData[src->componentData.elementCount() - 1];
-  memcpy(srcData, srcBack, src->componentData.elementSize());
-  src->componentData.PopBack();
+  int32_t backIndex = src->owningEntities.size() - 1;
+  if (backIndex >= 0)
+  {
+    Entity backEntity = src->owningEntities[backIndex];
+    EcsRecord* backRecord = &m_records[backEntity];
 
-  src->owningEntities[srcIndex] = src->owningEntities[src->owningEntities.size() - 1];
-  src->owningEntities.pop_back();
+    if (src->componentData.elementCount() > 0 && backEntity != e)
+    {
+      void* backData = src->componentData[backIndex];
+      memcpy(srcData, backData, src->componentData.elementSize());
+
+      src->owningEntities[srcElementIndex] = backEntity;
+      backRecord->index = srcElementIndex;
+    }
+    src->componentData.PopBack();
+    src->owningEntities.pop_back();
+  }
+
+  return dst->componentData.GetSubElement(dstElementIndex, dst->componentDataOffsets[id]);
+}
+
+void* EcsWorld::SetComponent(Entity e, ComponentId id, const void* data)
+{
+  void* componentData = nullptr;
+  if (!EntityHasComponent(e, id))
+  {
+    componentData = AddComponent(e, id);
+  }
+
+  if (data != nullptr)
+  {
+    memcpy(componentData, data, m_componentSizes[id]);
+  }
+
+  return componentData;
 }
 
 void EcsWorld::RemoveComponent(Entity e, ComponentId id)
@@ -133,26 +174,28 @@ void EcsWorld::RemoveComponent(Entity e, ComponentId id)
   EcsRecord* record = &m_records[e];
   EcsArchetype* src = record->archetype;
   EcsArchetype* dst = GetArchetypePrevious(record->archetype, id);
-  uint32_t srcIndex = record->index;
+  uint32_t srcElementIndex = record->index;
+  uint32_t dstElementIndex = dst->componentData.elementCount();
 
   record->archetype = dst;
-  record->index = dst->componentData.elementCount() - 1;
+  record->index = dstElementIndex;
 
-  if (dst->componentData.elementCount() == 0)
-    return;
+  dst->owningEntities.push_back(e);
+  void* dstData = dst->componentData.PushBack();
 
   // Copy data to previous archetype
-  void* srcData = src->componentData[srcIndex];
-  void* dstData = dst->componentData.PushBack();
+  void* srcData = src->componentData[srcElementIndex];
+  uint32_t srcIndex = 0, dstIndex = 0;
   uint32_t srcOffset = 0, dstOffset = 0;
   uint32_t curSize = 0;
-  for (uint32_t i = 0; i < src->componentIds.size(); i++)
+  for (; srcIndex < src->componentIds.size();)
   {
-    curSize = m_componentSizes[src->componentIds[i]];
+    curSize = m_componentSizes[src->componentIds[srcIndex]];
 
-    if (src->componentIds[i] != dst->componentIds[i])
+    if (dstIndex >= dst->componentIds.size() || src->componentIds[srcIndex] != dst->componentIds[dstIndex])
     {
       srcOffset += curSize;
+      srcIndex++;
       continue;
     }
 
@@ -160,17 +203,28 @@ void EcsWorld::RemoveComponent(Entity e, ComponentId id)
 
     srcOffset += curSize;
     dstOffset += curSize;
+    srcIndex++;
+    dstIndex++;
   }
 
-  dst->owningEntities.push_back(e);
-
   // Remove entity from src archetype
-  void* srcBack = src->componentData[src->componentData.elementCount() - 1];
-  memcpy(srcData, srcBack, src->componentData.elementSize());
-  src->componentData.PopBack();
+  int32_t backIndex = src->owningEntities.size() - 1;
+  if (backIndex >= 0)
+  {
+    Entity backEntity = src->owningEntities[backIndex];
+    EcsRecord* backRecord = &m_records[backEntity];
 
-  src->owningEntities[srcIndex] = src->owningEntities[src->owningEntities.size() - 1];
-  src->owningEntities.pop_back();
+    if (src->componentData.elementCount() > 0 && backEntity != e)
+    {
+      void* backData = src->componentData[backIndex];
+      memcpy(srcData, backData, src->componentData.elementSize());
+
+      src->owningEntities[srcElementIndex] = backEntity;
+      backRecord->index = srcElementIndex;
+    }
+    src->componentData.PopBack();
+    src->owningEntities.pop_back();
+  }
 }
 
 // ==========================================================================================
@@ -217,6 +271,9 @@ EcsArchetype* EcsWorld::CreateArchetype(const std::vector<ComponentId>& componen
 
 EcsArchetype* EcsWorld::GetArchetypeNext(EcsArchetype* arch, ComponentId id)
 {
+  if (ArchetypeHasComponent(arch, id))
+    return arch;
+
   if (!arch->additionalEdges.contains(id))
   {
     std::vector<ComponentId> nextIds(arch->componentIds);
@@ -244,6 +301,9 @@ EcsArchetype* EcsWorld::GetArchetypeNext(EcsArchetype* arch, ComponentId id)
 
 EcsArchetype* EcsWorld::GetArchetypePrevious(EcsArchetype* arch, ComponentId id)
 {
+  if (!ArchetypeHasComponent(arch, id))
+    return arch;
+
   if (arch->subtractionalEdges.contains(id))
   {
     return arch->subtractionalEdges[id];
@@ -289,11 +349,19 @@ void* EcsWorld::GetComponentData(EcsRecord* record, ComponentId id)
 
 void EcsWorld::PrintNextEdges()
 {
+  char componentNamesBuffer[1024];
+
   for (std::pair<ArchetypeId, EcsArchetype> ap : m_archetypes)
   {
     EcsArchetype& arch = ap.second;
+    componentNamesBuffer[0] = '\0';
 
-    QTZ_LOG_CORE_DEBUG("Arch ({}) : {}", arch.id, arch.additionalEdges.size());
+    for (uint32_t i = 0; i < arch.componentIds.size(); i++)
+    {
+      sprintf(componentNamesBuffer, "%s, %s", componentNamesBuffer, m_componentNames[arch.componentIds[i]].c_str());
+    }
+
+    QTZ_LOG_CORE_DEBUG("Arch ({})\n\t>{}", componentNamesBuffer, arch.additionalEdges.size());
     for (std::pair<ComponentId, EcsArchetype*> edge : arch.additionalEdges)
     {
       QTZ_LOG_CORE_DEBUG(">> {}", edge.second->id);
@@ -303,16 +371,118 @@ void EcsWorld::PrintNextEdges()
 
 void EcsWorld::PrintPrevEdges()
 {
+  char componentNamesBuffer[1024];
+
   for (std::pair<ArchetypeId, EcsArchetype> ap : m_archetypes)
   {
     EcsArchetype& arch = ap.second;
+    componentNamesBuffer[0] = '\0';
 
-    QTZ_LOG_CORE_DEBUG("Arch ({}) : {}", arch.id, arch.subtractionalEdges.size());
+    for (uint32_t i = 0; i < arch.componentIds.size(); i++)
+    {
+      sprintf(componentNamesBuffer, "%s, %s", componentNamesBuffer, m_componentNames[arch.componentIds[i]].c_str());
+    }
+
+    QTZ_LOG_CORE_DEBUG("Arch ({})\n\t>{}", componentNamesBuffer, arch.subtractionalEdges.size());
     for (std::pair<ComponentId, EcsArchetype*> edge : arch.subtractionalEdges)
     {
       QTZ_LOG_CORE_DEBUG(">> {}", edge.second->id);
     }
   }
+}
+
+void EcsWorld::PrintArchOwners()
+{
+  char componentNamesBuffer[1024];
+  char ownersBuffer[1024];
+
+  for (std::pair<ArchetypeId, EcsArchetype> ap : m_archetypes)
+  {
+    ownersBuffer[0] = '\0';
+    EcsArchetype& arch = ap.second;
+    componentNamesBuffer[0] = '\0';
+
+    for (uint32_t i = 0; i < arch.componentIds.size(); i++)
+    {
+      sprintf(componentNamesBuffer, "%s, %s", componentNamesBuffer, m_componentNames[arch.componentIds[i]].c_str());
+    }
+
+    for (uint32_t i = 0; i < arch.owningEntities.size(); i++)
+    {
+      sprintf(ownersBuffer, "%s, %u", ownersBuffer, arch.owningEntities[i]);
+    }
+
+    QTZ_LOG_CORE_DEBUG("Arch ({})\n\t>{}", componentNamesBuffer, ownersBuffer);
+  }
+}
+
+// ==========================================================================================
+// Iterator
+// ==========================================================================================
+
+bool EcsIterator::StepNextElement()
+{
+  m_currentArchElementIndex++;
+
+  if (m_currentArchElementIndex >= m_currentArch->componentData.elementCount())
+  {
+    m_currentArchElementIndex = 0;
+    m_currentArch = nullptr;
+
+    if (m_currentLayerQueue.empty())
+    {
+      m_currentLayerQueue = std::deque<EcsArchetype*>(m_nextLayerQueue);
+      m_nextLayerQueue.clear();
+    }
+
+    if (m_currentLayerQueue.empty())
+    {
+      return true;
+    }
+
+    m_currentArch = m_currentLayerQueue.front();
+    m_currentLayerQueue.pop_front();
+
+    SetupCurrentArch();
+  }
+
+  return AtEnd();
+}
+
+bool EcsIterator::AtEnd()
+{
+  return m_currentLayerQueue.empty() && m_nextLayerQueue.empty() && m_currentArch == nullptr;
+}
+
+Entity EcsIterator::CurrentEntity()
+{
+  return m_currentArch->owningEntities[m_currentArchElementIndex];
+}
+
+void* EcsIterator::GetComponent(ComponentId id)
+{
+  return m_currentArch->componentData.GetSubElement(m_currentArchElementIndex, m_currentArch->componentDataOffsets[id]);
+}
+
+void EcsIterator::SetupCurrentArch()
+{
+  std::deque<EcsArchetype*>::iterator iter;
+  for (std::pair<ComponentId, EcsArchetype*> child : m_currentArch->additionalEdges)
+  {
+    iter = std::find(m_nextLayerQueue.begin(), m_nextLayerQueue.end(), child.second);
+    if (iter == m_nextLayerQueue.end())
+    {
+      m_nextLayerQueue.push_back(child.second);
+    }
+  }
+
+  if (m_currentArch->owningEntities.size() == 0)
+  {
+    StepNextElement();
+    return;
+  }
+
+  m_currentArchElementIndex = 0;
 }
 
 } // namespace Quartz
