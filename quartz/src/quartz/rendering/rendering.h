@@ -15,8 +15,8 @@ namespace Quartz
 
 struct Renderable
 {
-  Mesh mesh;
-  Material material;
+  class Mesh mesh;
+  class Material material;
 
   Transform transform;
   Mat4 transformMatrix;

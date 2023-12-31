@@ -3,6 +3,7 @@
 #include "quartz/defines.h"
 
 #include <opal.h>
+#define PERIDOT_VULKAN
 #include <peridot.h>
 
 namespace Quartz

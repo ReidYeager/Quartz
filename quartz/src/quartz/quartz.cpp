@@ -12,7 +12,11 @@ namespace Quartz
 {
 uint32_t g_quartzAttemptDepth = 0;
 
-void Run()
+Window* g_window;
+Renderer g_renderer;
+std::vector<Renderable> g_renderables;
+
+void Run(bool(*GameInit)(), bool(*GameUpdate)(float deltaTime), bool(*GameShutdown)())
 {
   // ============================================================
   // Init
@@ -21,62 +25,12 @@ void Run()
   Logger::Init();
 
   // Create window
-  Window* window = CreateWindow();
+  g_window = CreateWindow();
 
   // Init rendering api
-  Renderer renderer;
-  renderer.Init(window);
+  g_renderer.Init(g_window);
 
-  Material mat = renderer.CreateMaterial({
-    "D:/Dev/Quartz/quartz/res/shaders/compiled/blank.vert.spv",
-    "D:/Dev/Quartz/quartz/res/shaders/compiled/blank.frag.spv"
-    });
-
-  float ratio = (float)window->Width() / (float)window->Height();
-  Mat4 projMatrix = ProjectionPerspectiveExtended(ratio, 16.0f / 9.0f, 60.0f, 0.1f, 100.0f);
-
-  Transform camTransform = transformIdentity;
-  camTransform.position.z = -2.0f;
-  camTransform.rotation.y = 180.0f;
-
-  Mat4 camMatrix = Mat4MuliplyMat4(projMatrix, Mat4Invert(TransformToMat4(camTransform)));
-  mat.PushData(&camMatrix);
-
-  std::vector<Vertex> verts = {
-    { .position = {  0.5f,  0.5f, -0.5f } }, // Right, Top,    Back   0
-    { .position = {  0.5f, -0.5f, -0.5f } }, // Right, Bottom, Back   1
-    { .position = {  0.5f,  0.5f,  0.5f } }, // Right, Top,    Front  2
-    { .position = {  0.5f, -0.5f,  0.5f } }, // Right, Bottom, Front  3
-    { .position = { -0.5f,  0.5f, -0.5f } }, // Left,  Top,    Back   4
-    { .position = { -0.5f, -0.5f, -0.5f } }, // Left,  Bottom, Back   5
-    { .position = { -0.5f,  0.5f,  0.5f } }, // Left,  Top,    Front  6
-    { .position = { -0.5f, -0.5f,  0.5f } }, // Left,  Bottom, Front  7
-  };
-  std::vector<uint32_t> indices = {
-    0, 4, 6, 0, 6, 2, // Top
-    5, 1, 3, 5, 3, 7, // Bottom
-    3, 2, 6, 3, 6, 7, // Front
-    5, 4, 0, 5, 0, 1, // Back
-    7, 6, 4, 7, 4, 5, // Left
-    1, 0, 2, 1, 2, 3, // Right
-  };
-  Mesh mesh = renderer.CreateMesh(verts, indices);
-
-  Renderable baseRenderable {};
-  baseRenderable.material = mat;
-  baseRenderable.mesh = mesh;
-  baseRenderable.transform = transformIdentity;
-  baseRenderable.transform.position.z = 1.0f;
-  baseRenderable.transformMatrix = TransformToMat4(transformIdentity);
-
-  std::vector<Renderable> renderables;
-  renderables.push_back(baseRenderable);
-  baseRenderable.transform.position = Vec3{ 2.0f, 1.0f, 2.0f };
-  renderables.push_back(baseRenderable);
-  baseRenderable.transform.position = Vec3{ 5.0f, 0.0f, 10.0f };
-  renderables.push_back(baseRenderable);
-  baseRenderable.transform.position = Vec3{ -2.0f, -4.0f, 6.0f };
-  renderables.push_back(baseRenderable);
+  GameInit();
 
   // ============================================================
   // Update
@@ -85,8 +39,9 @@ void Run()
   auto start = std::chrono::high_resolution_clock::now();
   auto end = std::chrono::high_resolution_clock::now();
   double totalTime = 0.0f;
+  uint32_t frameCount = 0;
 
-  while (!window->ShouldClose())
+  while (!g_window->ShouldClose())
   {
     end = std::chrono::high_resolution_clock::now();
     float deltaTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() * 0.000001f;
@@ -95,29 +50,55 @@ void Run()
     if (deltaTime >= 1.0f)
       deltaTime = 0.016f; // Fake 60fps for stepping through
 
-    for (uint32_t i = 0; i < renderables.size(); i++)
-    {
-      Renderable& r = renderables[i];
-      r.transform.rotation.y += deltaTime * 30.0f * (i + 1);
-      r.transform.rotation.x += deltaTime * 30.0f * (i + 1);
-      r.transform.rotation.z += deltaTime * 30.0f * (i + 1);
-      r.transform.position.x = sin(totalTime / (i + 1)) * i * 3;
-      r.transformMatrix = TransformToMat4(r.transform);
-    }
+    g_window->PollEvents();
 
-    window->PollEvents();
-    renderer.Render(deltaTime, renderables);
+    GameUpdate(deltaTime);
+
+    g_renderer.Render(deltaTime, g_renderables);
+
+    g_renderables.clear();
+    frameCount++;
   }
+
+  QTZ_DEBUG("Average frame time : {} sec", totalTime / frameCount);
 
   // ============================================================
   // Shutdown
   // ============================================================
 
-  mat.Shutdown();
-  mesh.Shutdown();
+  GameShutdown();
 
-  renderer.Shutdown();
-  window->Shutdown();
+  g_renderer.Shutdown();
+  g_window->Shutdown();
+  delete(g_window);
+}
+
+uint32_t WindowGetWidth()
+{
+  return g_window->Width();
+}
+uint32_t WindowGetHeight()
+{
+  return g_window->Height();
+}
+
+Material CreateMaterial(const std::vector<const char*>& shaderPaths)
+{
+  return g_renderer.CreateMaterial(shaderPaths);
+}
+
+//Mesh CreateMesh(const char* path)
+//{
+//  return g_renderer.CreateMesh(path);
+//}
+Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
+{
+  return g_renderer.CreateMesh(vertices, indices);
+}
+
+void SubmitForRender(Renderable& renderable)
+{
+  g_renderables.push_back(renderable);
 }
 
 } // namespace Quartz
