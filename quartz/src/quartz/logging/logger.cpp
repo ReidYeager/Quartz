@@ -23,7 +23,7 @@ void Logger::Init()
   appLogger->set_level(spdlog::level::err);
 #endif
 
-  QTZ_LOG_CORE_INFO("Logging initialized");
+  QTZ_INFO("Logging initialized");
 }
 
 } // namespace Quartz

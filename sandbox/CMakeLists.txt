@@ -15,7 +15,6 @@ add_executable (Sandbox
 )
 
 target_include_directories (Sandbox PUBLIC
-  ./
   ./src/
   ${PROJECT_SOURCE_DIR}/Quartz/src/
   VendorSandbox

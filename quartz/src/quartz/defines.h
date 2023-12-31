@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "quartz/logger.h"
+#include "quartz/logging/logger.h"
 
 enum QuartzResult
 {
@@ -12,20 +12,26 @@ enum QuartzResult
 
 namespace Quartz
 {
-extern uint32_t globalFunctionCallAttemptDepth;
+extern uint32_t g_quartzAttemptDepth;
 }
 
-#define QTZ_ATTEMPT(fn, ...)                                                                                     \
-{                                                                                                                \
-  Quartz::globalFunctionCallAttemptDepth++;                                                                      \
-  QuartzResult result = fn;                                                                                      \
-  Quartz::globalFunctionCallAttemptDepth--;                                                                      \
-  if (result != Quartz_Success)                                                                                  \
-  {                                                                                                              \
-    QTZ_LOG_CORE_ERROR("{} : \"{}\"\n\t{}:{}", Quartz::globalFunctionCallAttemptDepth, #fn, __FILE__, __LINE__); \
-    {                                                                                                            \
-      __VA_ARGS__;                                                                                               \
-    }                                                                                                            \
-    return Quartz_Failure;                                                                                       \
-  }                                                                                                              \
+#define QTZ_ATTEMPT(fn, ...)                                                                  \
+{                                                                                             \
+  Quartz::g_quartzAttemptDepth++;                                                             \
+  QuartzResult result = fn;                                                                   \
+  Quartz::g_quartzAttemptDepth--;                                                             \
+  if (result != Quartz_Success)                                                               \
+  {                                                                                           \
+    QTZ_ERROR("{} : \"{}\"\n\t{}:{}", Quartz::g_quartzAttemptDepth, #fn, __FILE__, __LINE__); \
+    {                                                                                         \
+      __VA_ARGS__;                                                                            \
+    }                                                                                         \
+    return Quartz_Failure;                                                                    \
+  }                                                                                           \
+}
+
+#define QTZ_ATTEMPT_FAIL_LOG(message, ...)    \
+{                                             \
+    QTZ_ERROR(message, __VA_ARGS__);          \
+    QTZ_ERROR("\t{}:{}", __FILE__, __LINE__); \
 }

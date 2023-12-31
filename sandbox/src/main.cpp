@@ -2,20 +2,24 @@
 #include <quartz.h>
 #include <stdio.h>
 
-class SandboxApp : public Quartz::Application
+bool Init()
 {
-public:
-  SandboxApp() {}
-  ~SandboxApp() {}
+  return true;
+}
 
-  virtual QuartzResult Init() override { return Quartz_Success; }
-  virtual QuartzResult Update() override { return Quartz_Success; }
-  virtual void Shutdown() override {}
-};
+bool Update()
+{
+  return true;
+}
+
+bool Shutdown()
+{
+  return true;
+}
 
 int main()
 {
-  SandboxApp app;
+  Quartz::Run();
 
   return 0;
 }
