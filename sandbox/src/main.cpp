@@ -2,12 +2,33 @@
 #include <quartz.h>
 #include <stdio.h>
 
+class GameLayer : public Quartz::Layer
+{
+public:
+  GameLayer() : Layer("Game layer") {}
+
+  void OnUpdate() override
+  {
+    QTZ_INFO("Game layer update");
+  }
+
+  void OnEvent(Quartz::Event& e) override
+  {
+    QTZ_WARNING("Game handling event : {}", e.GetTypeName_Debug());
+    e.NotifyHandled();
+  }
+};
+
 std::vector<Quartz::Renderable> renderables;
 Quartz::Material mat;
 Quartz::Mesh mesh;
 
 bool Init()
 {
+  Quartz::PushLayer(new GameLayer());
+  
+
+
   mat = Quartz::CreateMaterial({
       "D:/Dev/Quartz/quartz/res/shaders/compiled/blank.vert.spv",
       "D:/Dev/Quartz/quartz/res/shaders/compiled/blank.frag.spv"

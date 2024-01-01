@@ -8,6 +8,7 @@
 #include "quartz/rendering/material.h"
 #include "quartz/rendering/mesh.h"
 #include "quartz/rendering/rendering.h"
+#include "quartz/layers/layer.h"
 
 #include <vector>
 
@@ -30,5 +31,11 @@ Material CreateMaterial(const std::vector<const char*>& shaderPaths);
 //Mesh CreateMesh(const char* path);
 Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
 void SubmitForRender(Renderable& renderable);
+
+// ============================================================
+// Layers
+// ============================================================
+
+void PushLayer(Layer* layer);
 
 } // namespace Quartz

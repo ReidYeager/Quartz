@@ -5,6 +5,8 @@
 #include "quartz/events/event.h"
 #include "quartz/platform/platform.h"
 #include "quartz/rendering/rendering.h"
+#include "quartz/layers/layer.h"
+#include "quartz/layers/layer_stack.h"
 
 #include <chrono>
 #include <math.h>
@@ -16,17 +18,24 @@ uint32_t g_quartzAttemptDepth = 0;
 Window* g_window;
 Renderer g_renderer;
 std::vector<Renderable> g_renderables;
+LayerStack g_layerStack;
 
 void EventCallback(Event& e)
 {
-  QTZ_DEBUG("{} : {}", e.GetTypeNameDebug(), e.ToString_Debug());
+  //QTZ_DEBUG("{} : {}", e.GetTypeNameDebug(), e.ToString_Debug());
 
   // TODO : Pass the event down the layer stack
+  for (auto iter = g_layerStack.EndIterator(); iter != g_layerStack.BeginIterator(); )
+  {
+    iter--;
+    (*iter)->OnEvent(e);
+    if (e.GetHandled())
+      break;
+  }
 }
 
 void Run(bool(*GameInit)(), bool(*GameUpdate)(float deltaTime), bool(*GameShutdown)())
 {
-  // ============================================================
   // Init
   // ============================================================
 
@@ -41,7 +50,6 @@ void Run(bool(*GameInit)(), bool(*GameUpdate)(float deltaTime), bool(*GameShutdo
 
   GameInit();
 
-  // ============================================================
   // Update
   // ============================================================
 
@@ -71,7 +79,6 @@ void Run(bool(*GameInit)(), bool(*GameUpdate)(float deltaTime), bool(*GameShutdo
 
   QTZ_DEBUG("Average frame time : {} sec", totalTime / frameCount);
 
-  // ============================================================
   // Shutdown
   // ============================================================
 
@@ -82,6 +89,10 @@ void Run(bool(*GameInit)(), bool(*GameUpdate)(float deltaTime), bool(*GameShutdo
   delete(g_window);
 }
 
+// ============================================================
+// Window
+// ============================================================
+
 uint32_t WindowGetWidth()
 {
   return g_window->Width();
@@ -90,6 +101,10 @@ uint32_t WindowGetHeight()
 {
   return g_window->Height();
 }
+
+// ============================================================
+// Rendering
+// ============================================================
 
 Material CreateMaterial(const std::vector<const char*>& shaderPaths)
 {
@@ -109,5 +124,15 @@ void SubmitForRender(Renderable& renderable)
 {
   g_renderables.push_back(renderable);
 }
+
+// ============================================================
+// Layers
+// ============================================================
+
+void PushLayer(Layer* layer)
+{
+  g_layerStack.PushLayer(layer);
+}
+
 
 } // namespace Quartz

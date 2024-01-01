@@ -266,7 +266,7 @@ LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, 
     case WM_XBUTTONUP: button = GET_XBUTTON_WPARAM(wparam) + 2; break;
     default: break;
     }
-    EventMouseButtonPress e(button);
+    EventMouseButtonRelease e(button);
     thisWindow->m_eventCallbackFunction(e);
   } return 0;
   default: return DefWindowProcA(hwnd, message, wparam, lparam);

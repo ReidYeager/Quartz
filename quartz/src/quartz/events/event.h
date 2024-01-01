@@ -35,7 +35,7 @@ typedef uint16_t EventCategoryFlags;
 #define QTZ_EVENT_DEFINE_CONSTS(type, categoryFlags)                                \
 static Quartz::EventType GetTypeStatic() { return type; }                           \
 virtual Quartz::EventType GetType() const override { return type; }                 \
-virtual const char* GetTypeNameDebug() const override { return #type; }             \
+virtual const char* GetTypeName_Debug() const override { return #type; }            \
 virtual EventCategoryFlags GetCategories() const override { return categoryFlags; }
 
 class Event
@@ -43,9 +43,13 @@ class Event
 public:
   virtual EventType GetType() const = 0;
   virtual EventCategoryFlags GetCategories() const = 0;
-  virtual const char* GetTypeNameDebug() const = 0;
-  virtual std::string ToString_Debug() const { return GetTypeNameDebug(); }
-  inline bool HasCategory(EventCategoryBits mask) { return GetCategories() & mask; };
+  inline bool HasCategory(EventCategoryBits mask) const { return GetCategories() & mask; };
+
+  virtual const char* GetTypeName_Debug() const = 0;
+  virtual std::string ToString_Debug() const { return GetTypeName_Debug(); }
+
+  inline bool GetHandled() const { return m_handled; }
+  inline void NotifyHandled() { m_handled = true; }
 
 protected:
   bool m_handled = false;
