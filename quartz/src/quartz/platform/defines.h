@@ -7,3 +7,10 @@
 #undef CreateWindow
 #else
 #endif // QTZ_PLATFORM_WIN32
+
+namespace Quartz
+{
+
+typedef uint32_t Keycode;
+
+} // namespace Quartz

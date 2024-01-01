@@ -30,8 +30,8 @@ extern uint32_t g_quartzAttemptDepth;
   }                                                                                           \
 }
 
-#define QTZ_ATTEMPT_FAIL_LOG(message, ...)    \
+#define QTZ_ATTEMPT_FAIL_LOG(...)             \
 {                                             \
-    QTZ_ERROR(message, __VA_ARGS__);          \
+    QTZ_ERROR(__VA_ARGS__);                   \
     QTZ_ERROR("\t{}:{}", __FILE__, __LINE__); \
 }

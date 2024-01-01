@@ -58,13 +58,13 @@ QuartzResult Renderer::Init(Window* window)
   const uint32_t attachmentCount = 2;
   OpalAttachmentInfo attachments[attachmentCount];
   // Window buffer image
-  attachments[0].clearValue.color = (OpalColorValue){ 0.1f, 0.8f, 0.8f, 1.0f };
+  attachments[0].clearValue.color = OpalColorValue{ 0.1f, 0.8f, 0.8f, 1.0f };
   attachments[0].format = Opal_Format_BGR8;
   attachments[0].loadOp = Opal_Attachment_Op_Clear;
   attachments[0].shouldStore = true;
   attachments[0].usage = Opal_Attachment_Usage_Presented;
   // Depth image
-  attachments[1].clearValue.depthStencil = (OpalDepthStencilValue){ 1, 0 };
+  attachments[1].clearValue.depthStencil = OpalDepthStencilValue{ 1, 0 };
   attachments[1].format = Opal_Format_D24_S8;
   attachments[1].loadOp = Opal_Attachment_Op_Clear;
   attachments[1].shouldStore = false;

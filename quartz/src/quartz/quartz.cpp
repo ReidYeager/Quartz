@@ -2,6 +2,7 @@
 #include "quartz/defines.h"
 #include "quartz.h"
 
+#include "quartz/events/event.h"
 #include "quartz/platform/platform.h"
 #include "quartz/rendering/rendering.h"
 
@@ -16,6 +17,13 @@ Window* g_window;
 Renderer g_renderer;
 std::vector<Renderable> g_renderables;
 
+void EventCallback(Event& e)
+{
+  QTZ_DEBUG("{} : {}", e.GetTypeNameDebug(), e.ToString_Debug());
+
+  // TODO : Pass the event down the layer stack
+}
+
 void Run(bool(*GameInit)(), bool(*GameUpdate)(float deltaTime), bool(*GameShutdown)())
 {
   // ============================================================
@@ -26,6 +34,7 @@ void Run(bool(*GameInit)(), bool(*GameUpdate)(float deltaTime), bool(*GameShutdo
 
   // Create window
   g_window = CreateWindow();
+  g_window->SetEventCallbackFunction(EventCallback);
 
   // Init rendering api
   g_renderer.Init(g_window);

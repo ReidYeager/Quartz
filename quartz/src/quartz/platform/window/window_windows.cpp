@@ -163,12 +163,111 @@ void WindowWin32::PollEvents()
 
 LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, LPARAM lparam)
 {
+  if (thisWindow == nullptr)
+    return DefWindowProcA(hwnd, message, wparam, lparam);
+
   switch (message)
   {
   case WM_CLOSE:
   {
-    QTZ_DEBUG("Quit window");
+    EventWindowClose e;
     thisWindow->m_shouldClose = true;
+    thisWindow->m_eventCallbackFunction(e);
+  } return 0;
+  case WM_SIZE:
+  {
+    uint32_t w = LOWORD(lparam);
+    uint32_t h = HIWORD(lparam);
+    thisWindow->m_width = w;
+    thisWindow->m_height = h;
+    EventWindowResize e(w, h);
+    thisWindow->m_eventCallbackFunction(e);
+  } return 0;
+  case WM_KILLFOCUS:
+  case WM_SETFOCUS:
+  {
+    EventWindowFocus e(message == WM_SETFOCUS);
+    thisWindow->m_eventCallbackFunction(e);
+  } return 0;
+  case WM_MOVE:
+  {
+    int32_t x = LOWORD(lparam);
+    int32_t y = HIWORD(lparam);
+    EventWindowMove e(x, y);
+    thisWindow->m_eventCallbackFunction(e);
+  } return 0;
+
+  // Keyboard
+  // ===============
+  case WM_KEYDOWN:
+  case WM_SYSKEYDOWN:
+  {
+    // TODO : Translate the keycode to a custom value
+    EventKeyPressed e(wparam);
+    thisWindow->m_eventCallbackFunction(e);
+  } return 0;
+  case WM_KEYUP:
+  case WM_SYSKEYUP:
+  {
+    // TODO : Translate the keycode to a custom value
+    EventKeyReleased e(wparam);
+    thisWindow->m_eventCallbackFunction(e);
+  } return 0;
+
+  // Mouse
+  // ===============
+  case WM_MOUSEMOVE:
+  {
+    int32_t x = GET_X_LPARAM(lparam);
+    int32_t y = GET_Y_LPARAM(lparam);
+    EventMouseMove e(x, y);
+    thisWindow->m_eventCallbackFunction(e);
+  } return 0;
+  case WM_MOUSEWHEEL:
+  {
+    int32_t y = GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA;
+    EventMouseScroll e(0, y);
+    thisWindow->m_eventCallbackFunction(e);
+  } return 0;
+  case WM_MOUSEHWHEEL:
+  {
+    int32_t x = GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA;
+    EventMouseScroll e(x, 0);
+    thisWindow->m_eventCallbackFunction(e);
+  } return 0;
+  case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
+  case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
+  case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK:
+  case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK:
+  {
+    uint32_t button = 0;
+    switch (message)
+    {
+    case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK: button = 0; break;
+    case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK: button = 1; break;
+    case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK: button = 2; break;
+    case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK: button = GET_XBUTTON_WPARAM(wparam) + 2; break;
+    default: break;
+    }
+    EventMouseButtonPress e(button);
+    thisWindow->m_eventCallbackFunction(e);
+  } return 0;
+  case WM_LBUTTONUP:
+  case WM_RBUTTONUP:
+  case WM_MBUTTONUP:
+  case WM_XBUTTONUP:
+  {
+    uint32_t button = 0;
+    switch (message)
+    {
+    case WM_LBUTTONUP: button = 0; break;
+    case WM_RBUTTONUP: button = 1; break;
+    case WM_MBUTTONUP: button = 2; break;
+    case WM_XBUTTONUP: button = GET_XBUTTON_WPARAM(wparam) + 2; break;
+    default: break;
+    }
+    EventMouseButtonPress e(button);
+    thisWindow->m_eventCallbackFunction(e);
   } return 0;
   default: return DefWindowProcA(hwnd, message, wparam, lparam);
   }
