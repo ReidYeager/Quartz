@@ -26,8 +26,10 @@ class Renderer
 {
 public:
   QuartzResult Init(Window* window);
-  QuartzResult Render(float deltaTime, const std::vector<Renderable>& renderables);
+  QuartzResult Render(const std::vector<Renderable>& renderables);
   void Shutdown();
+
+  QuartzResult Resize(uint32_t width, uint32_t height);
 
   Material CreateMaterial(const std::vector<const char*>& shaderPaths);
   Mesh CreateMesh(const char* path);

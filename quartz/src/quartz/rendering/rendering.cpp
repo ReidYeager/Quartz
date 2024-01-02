@@ -104,21 +104,9 @@ QuartzResult Renderer::Init(Window* window)
   return Quartz_Success;
 }
 
-QuartzResult Renderer::Render(float deltaTime,  const std::vector<Renderable>& renderables)
+QuartzResult Renderer::Render(const std::vector<Renderable>& renderables)
 {
-  // Tmp : resize every frame
-  OpalResult result = OpalWindowReinit(m_window);
-  if (result != Opal_Success)
-  {
-    if (result == Opal_Window_Minimized)
-      return Quartz_Success;
-    else
-      return Quartz_Failure;
-  }
-  QTZ_ATTEMPT_OPAL(OpalImageResize(m_depthImage, m_window->extents));
-  QTZ_ATTEMPT_OPAL(OpalFramebufferReinit(m_framebuffer));
-
-  result = OpalRenderBegin(m_window);
+  OpalResult result = OpalRenderBegin(m_window);
   if (result != Opal_Success)
   {
     if (result == Opal_Window_Minimized)
@@ -149,6 +137,22 @@ void Renderer::Shutdown()
   OpalImageShutdown(&m_depthImage);
   OpalWindowShutdown(&m_window);
   OpalShutdown();
+}
+
+QuartzResult Renderer::Resize(uint32_t width, uint32_t height)
+{
+  OpalResult result = OpalWindowReinit(m_window);
+  if (result != Opal_Success)
+  {
+    if (result == Opal_Window_Minimized)
+      return Quartz_Success;
+    else
+      return Quartz_Failure;
+  }
+  QTZ_ATTEMPT_OPAL(OpalImageResize(m_depthImage, m_window->extents));
+  QTZ_ATTEMPT_OPAL(OpalFramebufferReinit(m_framebuffer));
+
+  return Quartz_Success;
 }
 
 Material Renderer::CreateMaterial(const std::vector<const char*>& shaderPaths)

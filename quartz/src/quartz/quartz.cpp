@@ -14,27 +14,36 @@
 namespace Quartz
 {
 uint32_t g_quartzAttemptDepth = 0;
+Time_T time;
 
-Window* g_window;
-Renderer g_renderer;
-std::vector<Renderable> g_renderables;
-LayerStack g_layerStack;
+Window* window;
+Renderer renderer;
+std::vector<Renderable> renderables;
+LayerStack layerStack;
+bool updateBlockedByOsInput = false;
 
 void EventCallback(Event& e)
 {
   //QTZ_DEBUG("{} : {}", e.GetTypeNameDebug(), e.ToString_Debug());
-
-  // TODO : Pass the event down the layer stack
-  for (auto iter = g_layerStack.EndIterator(); iter != g_layerStack.BeginIterator(); )
+  updateBlockedByOsInput |= e.HasCategory(Event_Category_Window);
+  if (e.GetType() == Event_Window_Resize)
   {
-    iter--;
-    (*iter)->OnEvent(e);
+    EventWindowResize* resize = (EventWindowResize*)&e;
+    // Adjust camera projections that point to the swapbuffer
+    renderer.Resize(resize->GetWidth(), resize->GetHeight());
+    renderer.Render(renderables);
+  }
+
+  for (auto iterator = layerStack.EndIterator(); iterator != layerStack.BeginIterator(); )
+  {
+    iterator--;
+    (*iterator)->OnEvent(e);
     if (e.GetHandled())
       break;
   }
 }
 
-void Run(bool(*GameInit)(), bool(*GameUpdate)(float deltaTime), bool(*GameShutdown)())
+void Run()
 {
   // Init
   // ============================================================
@@ -42,51 +51,64 @@ void Run(bool(*GameInit)(), bool(*GameUpdate)(float deltaTime), bool(*GameShutdo
   Logger::Init();
 
   // Create window
-  g_window = CreateWindow();
-  g_window->SetEventCallbackFunction(EventCallback);
+  window = CreateWindow();
+  window->SetEventCallbackFunction(EventCallback);
 
   // Init rendering api
-  g_renderer.Init(g_window);
+  renderer.Init(window);
 
-  GameInit();
+  PushLayer(GetGameLayer());
 
   // Update
   // ============================================================
 
+  auto realStart = std::chrono::high_resolution_clock::now();
   auto start = std::chrono::high_resolution_clock::now();
   auto end = std::chrono::high_resolution_clock::now();
-  double totalTime = 0.0f;
-  uint32_t frameCount = 0;
 
-  while (!g_window->ShouldClose())
+  time.frameCount = 0;
+  time.totalTimeDeltaSum = 0.0;
+
+  while (!window->ShouldClose())
   {
     end = std::chrono::high_resolution_clock::now();
-    float deltaTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() * 0.000001f;
+    time.deltaTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() * 0.000001;
+    if (time.deltaTime >= 1.0f || updateBlockedByOsInput)
+      time.deltaTime = 0.016f; // Fake 60fps for stepping through / moving or resizing the window
+    updateBlockedByOsInput = false;
+    time.totalTimeDeltaSum += time.deltaTime;
+    time.totalRealTime = std::chrono::duration_cast<std::chrono::microseconds>(end - realStart).count() * 0.000001;
     start = end;
-    totalTime += deltaTime;
-    if (deltaTime >= 1.0f)
-      deltaTime = 0.016f; // Fake 60fps for stepping through
 
-    g_window->PollEvents();
+    window->PollEvents();
+    renderables.clear();
 
-    GameUpdate(deltaTime);
+    for (auto iterator = layerStack.BeginIterator(); iterator != layerStack.EndIterator(); )
+    {
+      (*iterator)->OnUpdate();
+      iterator++;
+    }
 
-    g_renderer.Render(deltaTime, g_renderables);
+    renderer.Render(renderables);
 
-    g_renderables.clear();
-    frameCount++;
+    time.frameCount++;
   }
 
-  QTZ_DEBUG("Average frame time : {} sec", totalTime / frameCount);
+  QTZ_DEBUG("Average frame time : {} sec", time.totalTimeDeltaSum / time.frameCount);
 
   // Shutdown
   // ============================================================
 
-  GameShutdown();
+  PopLayer(GetGameLayer());
 
-  g_renderer.Shutdown();
-  g_window->Shutdown();
-  delete(g_window);
+  renderer.Shutdown();
+  window->Shutdown();
+  delete(window);
+}
+
+void Quit()
+{
+  window->MarkForClosure();
 }
 
 // ============================================================
@@ -95,11 +117,11 @@ void Run(bool(*GameInit)(), bool(*GameUpdate)(float deltaTime), bool(*GameShutdo
 
 uint32_t WindowGetWidth()
 {
-  return g_window->Width();
+  return window->Width();
 }
 uint32_t WindowGetHeight()
 {
-  return g_window->Height();
+  return window->Height();
 }
 
 // ============================================================
@@ -108,7 +130,7 @@ uint32_t WindowGetHeight()
 
 Material CreateMaterial(const std::vector<const char*>& shaderPaths)
 {
-  return g_renderer.CreateMaterial(shaderPaths);
+  return renderer.CreateMaterial(shaderPaths);
 }
 
 //Mesh CreateMesh(const char* path)
@@ -117,12 +139,12 @@ Material CreateMaterial(const std::vector<const char*>& shaderPaths)
 //}
 Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
 {
-  return g_renderer.CreateMesh(vertices, indices);
+  return renderer.CreateMesh(vertices, indices);
 }
 
 void SubmitForRender(Renderable& renderable)
 {
-  g_renderables.push_back(renderable);
+  renderables.push_back(renderable);
 }
 
 // ============================================================
@@ -131,7 +153,12 @@ void SubmitForRender(Renderable& renderable)
 
 void PushLayer(Layer* layer)
 {
-  g_layerStack.PushLayer(layer);
+  layerStack.PushLayer(layer);
+}
+
+void PopLayer(Layer* layer)
+{
+  layerStack.PopLayer(layer);
 }
 
 

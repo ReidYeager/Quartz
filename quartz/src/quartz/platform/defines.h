@@ -11,6 +11,4 @@
 namespace Quartz
 {
 
-typedef uint32_t Keycode;
-
 } // namespace Quartz

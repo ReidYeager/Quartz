@@ -8,6 +8,7 @@ namespace Quartz
 void LayerStack::PushLayer(Layer* layer)
 {
   m_underlayHead = m_layers.emplace(m_underlayHead, layer);
+  layer->OnAttach();
 }
 
 void LayerStack::PopLayer(Layer* layer)
@@ -15,14 +16,17 @@ void LayerStack::PopLayer(Layer* layer)
   auto iterator = std::find(m_layers.begin(), m_layers.end(), layer);
   if (iterator != m_layers.end())
   {
+    layer->OnDetach();
+    if (m_underlayHead != m_layers.begin())
+      m_underlayHead--;
     m_layers.erase(iterator);
-    m_underlayHead--;
   }
 }
 
 void LayerStack::PushOverlay(Layer* overlay)
 {
   m_layers.emplace_back(overlay);
+  overlay->OnAttach();
 }
 
 void LayerStack::PopOverlay(Layer* overlay)
@@ -30,6 +34,7 @@ void LayerStack::PopOverlay(Layer* overlay)
   auto iterator = std::find(m_layers.begin(), m_layers.end(), overlay);
   if (iterator != m_layers.end())
   {
+    overlay->OnDetach();
     m_layers.erase(iterator);
   }
 }

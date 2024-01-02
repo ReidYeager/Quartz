@@ -9,12 +9,14 @@
 #include "quartz/rendering/mesh.h"
 #include "quartz/rendering/rendering.h"
 #include "quartz/layers/layer.h"
+#include "quartz/platform/input/input.h"
 
 #include <vector>
 
 namespace Quartz {
 
-void Run(bool(*GameInit)(), bool(*GameUpdate)(float deltaTime), bool(*GameShutdown)());
+void Run();
+void Quit();
 
 // ============================================================
 // Window
@@ -37,5 +39,34 @@ void SubmitForRender(Renderable& renderable);
 // ============================================================
 
 void PushLayer(Layer* layer);
+void PopLayer(Layer* layer);
+
+// ============================================================
+// Msc
+// ============================================================
+struct Time_T
+{
+  double totalRealTime;
+  double deltaTime;
+  double totalTimeDeltaSum;
+  uint32_t frameCount;
+};
+extern Time_T time;
 
 } // namespace Quartz
+
+extern Quartz::Layer* GetGameLayer();
+
+#define QUARTZ_GAME_LAYER(layer)                 \
+Quartz::Layer* GetGameLayer()                    \
+{                                                \
+  static Quartz::Layer* gameLayer = new layer(); \
+  return gameLayer;                              \
+}
+
+#define QUARTZ_ENTRY_POINT \
+int main()                 \
+{                          \
+  Quartz::Run();           \
+  return 0;                \
+}

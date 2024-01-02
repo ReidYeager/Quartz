@@ -21,6 +21,7 @@ public:
   void Shutdown() override;
   void PollEvents() override;
   bool ShouldClose() override;
+  void MarkForClosure() override;
 
 private:
   QuartzResult Register();
@@ -153,6 +154,7 @@ void WindowWin32::PollEvents()
 {
   MSG message;
   uint32_t allowance = 10; // Limit number of messages allowed to process per call
+  m_input.UpdateState();
   while (allowance > 0 && PeekMessageA(&message, m_platformInfo.hwnd, 0, 0, PM_REMOVE))
   {
     allowance--;
@@ -202,15 +204,41 @@ LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, 
   case WM_KEYDOWN:
   case WM_SYSKEYDOWN:
   {
-    // TODO : Translate the keycode to a custom value
-    EventKeyPressed e(wparam);
+    WPARAM keycode = wparam;
+    UINT scancode = (lparam & 0x00ff0000) >> 16;
+    int isExtented = (lparam & 0x01000000) != 0;
+
+    switch (keycode)
+    {
+    case VK_SHIFT: keycode = MapVirtualKey(scancode, MAPVK_VSC_TO_VK_EX); break;
+    case VK_CONTROL: keycode = isExtented ? VK_RCONTROL : VK_LCONTROL; break;
+    case VK_MENU: keycode = isExtented ? VK_RMENU : VK_LMENU; break;
+    default: break;
+    }
+
+    // NOTE : Want to separate input state update and input event call?
+    thisWindow->m_input.HandlePress(PlatformKeyToQuartzInputCode[keycode]);
+    EventKeyPressed e(PlatformKeyToQuartzInputCode[keycode]);
     thisWindow->m_eventCallbackFunction(e);
   } return 0;
   case WM_KEYUP:
   case WM_SYSKEYUP:
   {
-    // TODO : Translate the keycode to a custom value
-    EventKeyReleased e(wparam);
+    WPARAM keycode = wparam;
+    UINT scancode = (lparam & 0x00ff0000) >> 16;
+    int isExtented = (lparam & 0x01000000) != 0;
+
+    switch (keycode)
+    {
+    case VK_SHIFT: keycode = MapVirtualKey(scancode, MAPVK_VSC_TO_VK_EX); break;
+    case VK_CONTROL: keycode = isExtented ? VK_RCONTROL : VK_LCONTROL; break;
+    case VK_MENU: keycode = isExtented ? VK_RMENU : VK_LMENU; break;
+    default: break;
+    }
+
+    // NOTE : Want to separate input state update and input event call?
+    thisWindow->m_input.HandleRelease(PlatformKeyToQuartzInputCode[keycode]);
+    EventKeyReleased e(PlatformKeyToQuartzInputCode[keycode]);
     thisWindow->m_eventCallbackFunction(e);
   } return 0;
 
@@ -218,20 +246,26 @@ LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, 
   // ===============
   case WM_MOUSEMOVE:
   {
+    // NOTE : Want to separate input state update and input event call?
     int32_t x = GET_X_LPARAM(lparam);
     int32_t y = GET_Y_LPARAM(lparam);
+    thisWindow->m_input.HandleMouseMove({x, y});
     EventMouseMove e(x, y);
     thisWindow->m_eventCallbackFunction(e);
   } return 0;
   case WM_MOUSEWHEEL:
   {
+    // NOTE : Want to separate input state update and input event call?
     int32_t y = GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA;
+    thisWindow->m_input.HandleMouseScroll(Vec2I{ 0, y });
     EventMouseScroll e(0, y);
     thisWindow->m_eventCallbackFunction(e);
   } return 0;
   case WM_MOUSEHWHEEL:
   {
+    // NOTE : Want to separate input state update and input event call?
     int32_t x = GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA;
+    thisWindow->m_input.HandleMouseScroll(Vec2I{ x, 0 });
     EventMouseScroll e(x, 0);
     thisWindow->m_eventCallbackFunction(e);
   } return 0;
@@ -249,6 +283,8 @@ LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, 
     case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK: button = GET_XBUTTON_WPARAM(wparam) + 2; break;
     default: break;
     }
+    // NOTE : Want to separate input state update and input event call?
+    thisWindow->m_input.HandleMousePress(button);
     EventMouseButtonPress e(button);
     thisWindow->m_eventCallbackFunction(e);
   } return 0;
@@ -266,6 +302,8 @@ LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, 
     case WM_XBUTTONUP: button = GET_XBUTTON_WPARAM(wparam) + 2; break;
     default: break;
     }
+    // NOTE : Want to separate input state update and input event call?
+    thisWindow->m_input.HandleMouseRelease(button);
     EventMouseButtonRelease e(button);
     thisWindow->m_eventCallbackFunction(e);
   } return 0;
@@ -287,6 +325,11 @@ void WindowWin32::Shutdown()
 bool WindowWin32::ShouldClose()
 {
   return m_shouldClose;
+}
+
+void WindowWin32::MarkForClosure()
+{
+  m_shouldClose = true;
 }
 
 } // namespace Quartz

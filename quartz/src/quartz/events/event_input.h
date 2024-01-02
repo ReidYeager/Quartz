@@ -3,6 +3,7 @@
 #include "quartz/defines.h"
 #include "quartz/events/event.h"
 #include "quartz/platform/defines.h"
+#include "quartz/platform/input/keys.h"
 
 namespace Quartz
 {
@@ -15,7 +16,7 @@ class EventKeyPressed : public Event
 {
 public:
   QTZ_EVENT_DEFINE_CONSTS(Event_Key_Press, Event_Category_Input | Event_Category_Keyboard)
-  EventKeyPressed(Keycode key) : m_keycode(key) {}
+  EventKeyPressed(ButtonCode key) : m_keycode(key) {}
 
   inline int32_t GetKeycode() const { return m_keycode; }
 
@@ -27,14 +28,14 @@ public:
   }
 
 private:
-  Keycode m_keycode;
+  ButtonCode m_keycode;
 };
 
 class EventKeyReleased : public Event
 {
 public:
   QTZ_EVENT_DEFINE_CONSTS(Event_Key_Release, Event_Category_Input | Event_Category_Keyboard)
-  EventKeyReleased(Keycode key) : m_keycode(key) {}
+  EventKeyReleased(ButtonCode key) : m_keycode(key) {}
 
   inline int32_t GetKeycode() const { return m_keycode; }
 
@@ -46,7 +47,7 @@ public:
   }
 
 private:
-  Keycode m_keycode;
+  ButtonCode m_keycode;
 };
 
 // ============================================================
