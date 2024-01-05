@@ -7,3 +7,6 @@
 [submodule "quartz/vendor/peridot"]
 	path = quartz/vendor/peridot
 	url = https://github.com/ReidYeager/Peridot
+[submodule "quartz/vendor/diamond"]
+	path = quartz/vendor/diamond
+	url = https://github.com/ReidYeager/Diamond

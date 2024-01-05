@@ -26,7 +26,9 @@ class Renderer
 {
 public:
   QuartzResult Init(Window* window);
-  QuartzResult Render(const std::vector<Renderable>& renderables);
+  void SubmitRenderable(Renderable* renderable);
+  QuartzResult Render();
+  void ClearRenderables();
   void Shutdown();
 
   QuartzResult Resize(uint32_t width, uint32_t height);
@@ -44,6 +46,8 @@ private:
 
   OpalRenderpass m_renderpass;
   OpalFramebuffer m_framebuffer;
+
+  std::vector<Renderable*> m_renderables;
 
   Transform m_camTransform = transformIdentity;
   Mat4 m_camProjection = mat4Identity;

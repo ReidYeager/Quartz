@@ -99,7 +99,6 @@ public:
 
   void UpdateState()
   {
-    PrintCurButtonState_Debug();
     prevState = curState;
     curState.mouseScroll = { 0, 0 };
   }

@@ -20,7 +20,7 @@ QuartzResult Renderer::Init(Window* window)
   };
 
   OpalInitInfo opalInfo;
-  opalInfo.debug = true;
+  opalInfo.debug = false;
   opalInfo.vertexStruct.count = vertexFormatCount;
   opalInfo.vertexStruct.pFormats = vertexFormats;
 
@@ -104,7 +104,7 @@ QuartzResult Renderer::Init(Window* window)
   return Quartz_Success;
 }
 
-QuartzResult Renderer::Render(const std::vector<Renderable>& renderables)
+QuartzResult Renderer::Render()
 {
   OpalResult result = OpalRenderBegin(m_window);
   if (result != Opal_Success)
@@ -116,16 +116,26 @@ QuartzResult Renderer::Render(const std::vector<Renderable>& renderables)
   }
 
   OpalRenderBeginRenderpass(m_renderpass, m_framebuffer);
-  for (const Renderable& r : renderables)
+  for (Renderable* r : m_renderables)
   {
-    r.material.Bind();
-    OpalRenderSetPushConstant((void*)&r.transformMatrix);
-    r.mesh.Render();
+    r->material.Bind();
+    OpalRenderSetPushConstant((void*)&r->transformMatrix);
+    r->mesh.Render();
   }
   OpalRenderEndRenderpass(m_renderpass);
   QTZ_ATTEMPT_OPAL(OpalRenderEnd());
 
   return Quartz_Success;
+}
+
+void Renderer::SubmitRenderable(Renderable* renderable)
+{
+  m_renderables.push_back(renderable);
+}
+
+void Renderer::ClearRenderables()
+{
+  m_renderables.clear();
 }
 
 void Renderer::Shutdown()

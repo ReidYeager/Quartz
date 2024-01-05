@@ -8,6 +8,8 @@
 #include "quartz/layers/layer.h"
 #include "quartz/layers/layer_stack.h"
 
+#include <diamond.h>
+
 #include <chrono>
 #include <math.h>
 
@@ -18,9 +20,11 @@ Time_T time;
 
 Window* window;
 Renderer renderer;
-std::vector<Renderable> renderables;
 LayerStack layerStack;
 bool updateBlockedByOsInput = false;
+Diamond::EcsWorld ecsWorld;
+std::vector<Diamond::Entity> entities;
+Diamond::ComponentId renderableComponentId;
 
 void EventCallback(Event& e)
 {
@@ -31,7 +35,7 @@ void EventCallback(Event& e)
     EventWindowResize* resize = (EventWindowResize*)&e;
     // Adjust camera projections that point to the swapbuffer
     renderer.Resize(resize->GetWidth(), resize->GetHeight());
-    renderer.Render(renderables);
+    renderer.Render();
   }
 
   for (auto iterator = layerStack.EndIterator(); iterator != layerStack.BeginIterator(); )
@@ -57,6 +61,8 @@ void Run()
   // Init rendering api
   renderer.Init(window);
 
+  renderableComponentId = ecsWorld.DefineComponent("renderable", sizeof(Renderable));
+
   PushLayer(GetGameLayer());
 
   // Update
@@ -81,7 +87,6 @@ void Run()
     start = end;
 
     window->PollEvents();
-    renderables.clear();
 
     for (auto iterator = layerStack.BeginIterator(); iterator != layerStack.EndIterator(); )
     {
@@ -89,7 +94,14 @@ void Run()
       iterator++;
     }
 
-    renderer.Render(renderables);
+    Diamond::EcsIterator renderableIter(&ecsWorld, {renderableComponentId});
+    renderer.ClearRenderables();
+    while (!renderableIter.AtEnd())
+    {
+      renderer.SubmitRenderable((Renderable*)renderableIter.GetComponent(renderableComponentId));
+      renderableIter.StepNextElement();
+    }
+    renderer.Render();
 
     time.frameCount++;
   }
@@ -100,6 +112,11 @@ void Run()
   // ============================================================
 
   PopLayer(GetGameLayer());
+
+  //for (auto e : entities)
+  //{
+  //  ecsWorld.DestroyEntity(e);
+  //}
 
   renderer.Shutdown();
   window->Shutdown();
@@ -142,11 +159,6 @@ Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>
   return renderer.CreateMesh(vertices, indices);
 }
 
-void SubmitForRender(Renderable& renderable)
-{
-  renderables.push_back(renderable);
-}
-
 // ============================================================
 // Layers
 // ============================================================
@@ -161,5 +173,20 @@ void PopLayer(Layer* layer)
   layerStack.PopLayer(layer);
 }
 
+// ============================================================
+// Objects
+// ============================================================
+
+Renderable* CreateObject()
+{
+  entities.push_back(ecsWorld.CreateEntity());
+  return (Renderable*)ecsWorld.AddComponent(entities.back(), renderableComponentId);
+}
+
+ObjectIterator CreateIterator(const std::vector<const char*>& componentNames)
+{
+  ObjectIterator iter(&ecsWorld, componentNames);
+  return iter;
+}
 
 } // namespace Quartz

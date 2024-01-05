@@ -11,6 +11,8 @@
 #include "quartz/layers/layer.h"
 #include "quartz/platform/input/input.h"
 
+#include <diamond.h>
+
 #include <vector>
 
 namespace Quartz {
@@ -30,9 +32,7 @@ uint32_t WindowGetHeight();
 // ============================================================
 
 Material CreateMaterial(const std::vector<const char*>& shaderPaths);
-//Mesh CreateMesh(const char* path);
 Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
-void SubmitForRender(Renderable& renderable);
 
 // ============================================================
 // Layers
@@ -40,6 +40,52 @@ void SubmitForRender(Renderable& renderable);
 
 void PushLayer(Layer* layer);
 void PopLayer(Layer* layer);
+
+// ============================================================
+// Objects
+// ============================================================
+
+class ObjectIterator
+{
+public:
+  ObjectIterator(Diamond::EcsWorld* world, const std::vector<const char*> componentNames) : m_world(world)
+  {
+    std::vector<Diamond::ComponentId> ids(componentNames.size());
+    for (uint32_t i = 0; i < componentNames.size(); i++)
+    {
+      ids[i] = world->GetComponentId(componentNames[i]);
+    }
+
+    m_iterator = new Diamond::EcsIterator(world, ids);
+  }
+  ~ObjectIterator()
+  {
+    delete m_iterator;
+  }
+
+  void NextElement()
+  {
+    m_iterator->StepNextElement();
+  }
+  bool AtEnd()
+  {
+    return m_iterator->AtEnd();
+  }
+
+  void* GetComponentValue(const char* comonentName)
+  {
+    Diamond::ComponentId id = m_world->GetComponentId(comonentName);
+    return m_iterator->GetComponent(id);
+  }
+
+private:
+  Diamond::EcsWorld* m_world;
+  Diamond::EcsIterator* m_iterator;
+};
+
+Renderable* CreateObject();
+void DestroyObject(Renderable* object);
+ObjectIterator CreateIterator(const std::vector<const char*>& componentNames);
 
 // ============================================================
 // Msc

@@ -153,7 +153,7 @@ QuartzResult WindowWin32::RegisterInput()
 void WindowWin32::PollEvents()
 {
   MSG message;
-  uint32_t allowance = 10; // Limit number of messages allowed to process per call
+  uint32_t allowance = 100; // Limit number of messages allowed to process per call
   m_input.UpdateState();
   while (allowance > 0 && PeekMessageA(&message, m_platformInfo.hwnd, 0, 0, PM_REMOVE))
   {

@@ -2,6 +2,8 @@
 #include <quartz.h>
 #include <stdio.h>
 
+#include <diamond.h>
+
 class GameLayer : public Quartz::Layer
 {
 public:
@@ -9,19 +11,13 @@ public:
 
   void OnAttach() override
   {
+    // Resources
+    // ============================================================
+
     m_mat = Quartz::CreateMaterial({
       "D:/Dev/Quartz/quartz/res/shaders/compiled/blank.vert.spv",
       "D:/Dev/Quartz/quartz/res/shaders/compiled/blank.frag.spv"
       });
-
-    float ratio = (float)Quartz::WindowGetWidth() / (float)Quartz::WindowGetHeight();
-    Mat4 projMatrix = ProjectionPerspectiveExtended(ratio, 16.0f / 9.0f, 60.0f, 0.1f, 100.0f);
-
-    camTransform.position.z = -2.0f;
-    camTransform.rotation.y = 180.0f;
-
-    camMatrix = Mat4MuliplyMat4(projMatrix, Mat4Invert(TransformToMat4(camTransform)));
-    m_mat.PushData(&camMatrix);
 
     std::vector<Quartz::Vertex> verts = {
       {.position = {  0.5f,  0.5f, -0.5f } }, // Right, Top,    Back   0
@@ -43,20 +39,39 @@ public:
     };
     m_mesh = Quartz::CreateMesh(verts, indices);
 
+    // Camera
+    // ============================================================
+
+    float ratio = (float)Quartz::WindowGetWidth() / (float)Quartz::WindowGetHeight();
+    Mat4 projMatrix = ProjectionPerspectiveExtended(ratio, 16.0f / 9.0f, 60.0f, 0.1f, 100.0f);
+    camTransform.position.z = -2.0f;
+    camTransform.rotation.y = 180.0f;
+    camMatrix = Mat4MuliplyMat4(projMatrix, Mat4Invert(TransformToMat4(camTransform)));
+    m_mat.PushData(&camMatrix);
+
+    // Entities
+    // ============================================================
+
     Quartz::Renderable baseRenderable{};
     baseRenderable.material = m_mat;
     baseRenderable.mesh = m_mesh;
     baseRenderable.transform = transformIdentity;
     baseRenderable.transform.position.z = 1.0f;
     baseRenderable.transformMatrix = TransformToMat4(transformIdentity);
+    renderables.push_back(Quartz::CreateObject());
+    *renderables.back() = baseRenderable;
 
-    renderables.push_back(baseRenderable);
     baseRenderable.transform.position = Vec3{ 2.0f, 1.0f, 2.0f };
-    renderables.push_back(baseRenderable);
+    renderables.push_back(Quartz::CreateObject());
+    *renderables.back() = baseRenderable;
+
     baseRenderable.transform.position = Vec3{ 5.0f, 0.0f, 10.0f };
-    renderables.push_back(baseRenderable);
+    renderables.push_back(Quartz::CreateObject());
+    *renderables.back() = baseRenderable;
+
     baseRenderable.transform.position = Vec3{ -2.0f, -4.0f, 6.0f };
-    renderables.push_back(baseRenderable);
+    renderables.push_back(Quartz::CreateObject());
+    *renderables.back() = baseRenderable;
   }
 
   void OnUpdate() override
@@ -66,27 +81,32 @@ public:
       Quartz::Quit();
     }
 
-    Quartz::Renderable& frontObject = renderables[0];
-    if (Quartz::Input::ButtonStatus(Quartz::Mouse_Left))
-    {
-      Vec2I mouseDelta = Quartz::Input::GetMouseDelta();
-      frontObject.transform.rotation.y -= mouseDelta.x;
-      frontObject.transform.rotation.x -= mouseDelta.y;
-      frontObject.transform.rotation.z += Quartz::Input::GetMouseScroll().y * 6.0f;
-      frontObject.transformMatrix = TransformToMat4(frontObject.transform);
-    }
-    Quartz::SubmitForRender(frontObject);
+    Quartz::ObjectIterator iter = Quartz::CreateIterator({"renderable"});
+    if (iter.AtEnd())
+      return;
 
-    for (uint32_t i = 1; i < renderables.size(); i++)
-    {
-      Quartz::Renderable& r = renderables[i];
-      r.transform.rotation.y += Quartz::time.deltaTime * 30.0f * (i + 1);
-      r.transform.rotation.x += Quartz::time.deltaTime * 30.0f * (i + 1);
-      r.transform.rotation.z += Quartz::time.deltaTime * 30.0f * (i + 1);
-      r.transform.position.x = sin(Quartz::time.totalTimeDeltaSum / (i + 1)) * i * 3;
-      r.transformMatrix = TransformToMat4(r.transform);
+    //Quartz::Renderable* frontObject = (Quartz::Renderable*)iter.GetComponentValue("renderable");
+    //if (Quartz::Input::ButtonStatus(Quartz::Mouse_Left))
+    //{
+    //  Vec2I mouseDelta = Quartz::Input::GetMouseDelta();
+    //  frontObject->transform.rotation.y -= mouseDelta.x;
+    //  frontObject->transform.rotation.x -= mouseDelta.y;
+    //  frontObject->transform.rotation.z += Quartz::Input::GetMouseScroll().y * 6.0f;
+    //  frontObject->transformMatrix = TransformToMat4(frontObject->transform);
+    //}
+    //iter.NextElement();
 
-      Quartz::SubmitForRender(r);
+    uint32_t i = 0;
+    while(!iter.AtEnd())
+    {
+      Quartz::Renderable* r = (Quartz::Renderable*)iter.GetComponentValue("renderable");
+      r->transform.rotation.y += Quartz::time.deltaTime * 30.0f * (i + 1);
+      r->transform.rotation.x += Quartz::time.deltaTime * 30.0f * (i + 1);
+      r->transform.rotation.z += Quartz::time.deltaTime * 30.0f * (i + 1);
+      r->transform.position.x = sin(Quartz::time.totalTimeDeltaSum / (i + 1)) * i * 3;
+      r->transformMatrix = TransformToMat4(r->transform);
+      i++;
+      iter.NextElement();
     }
   }
 
@@ -114,7 +134,7 @@ private:
   Transform camTransform = transformIdentity;
   Mat4 camMatrix = mat4Identity;
 
-  std::vector<Quartz::Renderable> renderables;
+  std::vector<Quartz::Renderable*> renderables;
   Quartz::Material m_mat {};
   Quartz::Mesh m_mesh {};
 };
