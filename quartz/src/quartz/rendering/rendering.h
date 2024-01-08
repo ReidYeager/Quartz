@@ -17,8 +17,6 @@ struct Renderable
 {
   class Mesh mesh;
   class Material material;
-
-  Transform transform;
   Mat4 transformMatrix;
 };
 

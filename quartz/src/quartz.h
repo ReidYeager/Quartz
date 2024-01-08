@@ -47,11 +47,24 @@ void PopLayer(Layer* layer);
 
 typedef Diamond::ComponentId ComponentId;
 
+ComponentId _DefineComponent(const char* name, size_t size);
+ComponentId _ComponentId(const char* name);
+#define QuartzDefineComponent(type) Quartz::_DefineComponent(#type, sizeof(type))
+#define QuartzComponentId(type) Quartz::_ComponentId(#type)
+
+bool HasComponent(Diamond::Entity, ComponentId id);
+void* AddComponent(Diamond::Entity, ComponentId id);
+void* GetComponent(Diamond::Entity, ComponentId id);
+
 class Entity
 {
 public:
   Entity();
   ~Entity();
+
+  bool Has(ComponentId id) { return HasComponent(m_id, id); }
+  void* Add(ComponentId id) { return AddComponent(m_id, id); }
+  void* Get(ComponentId id) { return GetComponent(m_id, id); }
 
 private:
   Diamond::Entity m_id;
@@ -82,14 +95,6 @@ public:
 private:
   Diamond::EcsIterator* m_iterator;
 };
-
-ComponentId _DefineComponent(const char* name, size_t size);
-ComponentId _ComponentId(const char* name);
-#define QuartzDefineComponent(type) Quartz::_DefineComponent(#type, sizeof(type))
-#define QuartzComponentId(type) Quartz::_ComponentId(#type)
-
-Renderable* CreateObject();
-void DestroyObject(Renderable* object);
 
 // ============================================================
 // Msc

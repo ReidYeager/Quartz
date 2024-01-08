@@ -20,15 +20,11 @@ public:
   QuartzResult Init() override;
   void Shutdown() override;
   void PollEvents() override;
-  bool ShouldClose() override;
-  void MarkForClosure() override;
 
 private:
   QuartzResult Register();
   QuartzResult CreateWindow();
   QuartzResult RegisterInput();
-
-  bool m_shouldClose = false;
 }; // class WindowWin32
 
 Window* CreateWindow()
@@ -178,12 +174,28 @@ LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, 
   } return 0;
   case WM_SIZE:
   {
-    uint32_t w = LOWORD(lparam);
-    uint32_t h = HIWORD(lparam);
-    thisWindow->m_width = w;
-    thisWindow->m_height = h;
-    EventWindowResize e(w, h);
-    thisWindow->m_eventCallbackFunction(e);
+    bool wasMinimized = thisWindow->m_minimized;
+    thisWindow->m_minimized = wparam == SIZE_MINIMIZED;
+    if (wparam == SIZE_MINIMIZED)
+    {
+      EventWindowMinimize e(true);
+      thisWindow->m_eventCallbackFunction(e);
+    }
+    else
+    {
+      if (wasMinimized)
+      {
+        EventWindowMinimize e(false);
+        thisWindow->m_eventCallbackFunction(e);
+      }
+
+      uint32_t w = LOWORD(lparam);
+      uint32_t h = HIWORD(lparam);
+      thisWindow->m_width = w;
+      thisWindow->m_height = h;
+      EventWindowResize e(w, h);
+      thisWindow->m_eventCallbackFunction(e);
+    }
   } return 0;
   case WM_KILLFOCUS:
   case WM_SETFOCUS:
@@ -320,16 +332,6 @@ void WindowWin32::Shutdown()
   DestroyWindow(m_platformInfo.hwnd);
   UnregisterClassA(QTZ_WIN32_WINDOW_CLASS_NAME, m_platformInfo.hinstance);
   QTZ_INFO("Window shutdown");
-}
-
-bool WindowWin32::ShouldClose()
-{
-  return m_shouldClose;
-}
-
-void WindowWin32::MarkForClosure()
-{
-  m_shouldClose = true;
 }
 
 } // namespace Quartz

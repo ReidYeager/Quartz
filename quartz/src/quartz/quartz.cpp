@@ -25,6 +25,7 @@ bool updateBlockedByOsInput = false;
 Diamond::EcsWorld globalEcsWorld;
 std::vector<Diamond::Entity> entities;
 ComponentId renderableComponentId;
+ComponentId transformComponentId;
 
 void EventCallback(Event& e)
 {
@@ -62,6 +63,7 @@ void Run()
   renderer.Init(window);
 
   renderableComponentId = QuartzDefineComponent(Quartz::Renderable);
+  transformComponentId = QuartzDefineComponent(Transform);
 
   PushLayer(GetGameLayer());
 
@@ -80,7 +82,7 @@ void Run()
     end = std::chrono::high_resolution_clock::now();
     time.deltaTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() * 0.000001;
     if (time.deltaTime >= 1.0f || updateBlockedByOsInput)
-      time.deltaTime = 0.016f; // Fake 60fps for stepping through / moving or resizing the window
+      time.deltaTime = 0.016f; // Fake 60fps for stepping through or moving/resizing the window
     updateBlockedByOsInput = false;
     time.totalTimeDeltaSum += time.deltaTime;
     time.totalRealTime = std::chrono::duration_cast<std::chrono::microseconds>(end - realStart).count() * 0.000001;
@@ -94,14 +96,27 @@ void Run()
       iterator++;
     }
 
-    Diamond::EcsIterator renderableIter(&globalEcsWorld, {renderableComponentId});
+    Diamond::EcsIterator renderableIter(&globalEcsWorld, { renderableComponentId, transformComponentId });
     renderer.ClearRenderables();
     while (!renderableIter.AtEnd())
     {
-      renderer.SubmitRenderable((Renderable*)renderableIter.GetComponent(renderableComponentId));
+      Renderable* r = (Renderable*)renderableIter.GetComponent(renderableComponentId);
+      Transform* t = (Transform*)renderableIter.GetComponent(transformComponentId);
+
+      r->transformMatrix = TransformToMat4(*t);
+
+      if (!window->Minimized())
+      {
+        renderer.SubmitRenderable(r);
+      }
+
       renderableIter.StepNextElement();
     }
-    renderer.Render();
+
+    if (!window->Minimized())
+    {
+      renderer.Render();
+    }
 
     time.frameCount++;
   }
@@ -183,10 +198,32 @@ ComponentId _ComponentId(const char* name)
   return globalEcsWorld.GetComponentId(name);
 }
 
-Renderable* CreateObject()
+Entity::Entity()
 {
-  entities.push_back(globalEcsWorld.CreateEntity());
-  return (Renderable*)globalEcsWorld.AddComponent(entities.back(), renderableComponentId);
+  m_id = globalEcsWorld.CreateEntity();
+  AddComponent(m_id, QuartzComponentId(Transform));
+  AddComponent(m_id, QuartzComponentId(Quartz::Renderable));
+  //entities.push_back(m_id);
+}
+
+Entity::~Entity()
+{
+  globalEcsWorld.DestroyEntity(m_id);
+}
+
+bool HasComponent(Diamond::Entity e, ComponentId id)
+{
+  return globalEcsWorld.EntityHasComponent(e, (Diamond::ComponentId)id);
+}
+
+void* AddComponent(Diamond::Entity e, ComponentId id)
+{
+  return globalEcsWorld.AddComponent(e, (Diamond::ComponentId)id);
+}
+
+void* GetComponent(Diamond::Entity e, ComponentId id)
+{
+  return globalEcsWorld.GetComponent(e, (Diamond::ComponentId)id);
 }
 
 ObjectIterator::ObjectIterator(const std::vector<ComponentId>& componentIds)

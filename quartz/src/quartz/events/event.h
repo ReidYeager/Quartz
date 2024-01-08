@@ -9,6 +9,7 @@ enum EventType
 {
   Event_Window_Close,
   Event_Window_Resize,
+  Event_Window_Minimize,
   Event_Window_Move,
   Event_Window_Focus,
 
