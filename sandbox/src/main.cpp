@@ -81,25 +81,27 @@ public:
       Quartz::Quit();
     }
 
-    Quartz::ObjectIterator iter = Quartz::CreateIterator({"renderable"});
+    Quartz::ComponentId renderableId = QuartzComponentId(Quartz::Renderable);
+
+    Quartz::ObjectIterator iter({renderableId});
     if (iter.AtEnd())
       return;
 
-    //Quartz::Renderable* frontObject = (Quartz::Renderable*)iter.GetComponentValue("renderable");
-    //if (Quartz::Input::ButtonStatus(Quartz::Mouse_Left))
-    //{
-    //  Vec2I mouseDelta = Quartz::Input::GetMouseDelta();
-    //  frontObject->transform.rotation.y -= mouseDelta.x;
-    //  frontObject->transform.rotation.x -= mouseDelta.y;
-    //  frontObject->transform.rotation.z += Quartz::Input::GetMouseScroll().y * 6.0f;
-    //  frontObject->transformMatrix = TransformToMat4(frontObject->transform);
-    //}
-    //iter.NextElement();
+    Quartz::Renderable* frontObject = (Quartz::Renderable*)iter.GetComponentValue(renderableId);
+    if (Quartz::Input::ButtonStatus(Quartz::Mouse_Left))
+    {
+      Vec2I mouseDelta = Quartz::Input::GetMouseDelta();
+      frontObject->transform.rotation.y -= mouseDelta.x;
+      frontObject->transform.rotation.x -= mouseDelta.y;
+      frontObject->transform.rotation.z += Quartz::Input::GetMouseScroll().y * 6.0f;
+      frontObject->transformMatrix = TransformToMat4(frontObject->transform);
+    }
+    iter.NextElement();
 
     uint32_t i = 0;
     while(!iter.AtEnd())
     {
-      Quartz::Renderable* r = (Quartz::Renderable*)iter.GetComponentValue("renderable");
+      Quartz::Renderable* r = (Quartz::Renderable*)iter.GetComponentValue(renderableId);
       r->transform.rotation.y += Quartz::time.deltaTime * 30.0f * (i + 1);
       r->transform.rotation.x += Quartz::time.deltaTime * 30.0f * (i + 1);
       r->transform.rotation.z += Quartz::time.deltaTime * 30.0f * (i + 1);

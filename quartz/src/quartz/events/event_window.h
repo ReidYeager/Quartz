@@ -41,7 +41,7 @@ private:
 class EventWindowMove : public Event
 {
 public:
-  QTZ_EVENT_DEFINE_CONSTS(Event_Window_Resize, Event_Category_Window)
+  QTZ_EVENT_DEFINE_CONSTS(Event_Window_Move, Event_Category_Window)
   EventWindowMove(int32_t newX, int32_t newY) : m_xPos(newX), m_yPos(newY) {}
 
   inline int32_t GetXPos() const { return m_xPos; }

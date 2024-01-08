@@ -45,19 +45,23 @@ void PopLayer(Layer* layer);
 // Objects
 // ============================================================
 
+typedef Diamond::ComponentId ComponentId;
+
+class Entity
+{
+public:
+  Entity();
+  ~Entity();
+
+private:
+  Diamond::Entity m_id;
+};
+
 class ObjectIterator
 {
 public:
-  ObjectIterator(Diamond::EcsWorld* world, const std::vector<const char*> componentNames) : m_world(world)
-  {
-    std::vector<Diamond::ComponentId> ids(componentNames.size());
-    for (uint32_t i = 0; i < componentNames.size(); i++)
-    {
-      ids[i] = world->GetComponentId(componentNames[i]);
-    }
+  ObjectIterator(const std::vector<ComponentId>& componentIds);
 
-    m_iterator = new Diamond::EcsIterator(world, ids);
-  }
   ~ObjectIterator()
   {
     delete m_iterator;
@@ -67,25 +71,25 @@ public:
   {
     m_iterator->StepNextElement();
   }
+
   bool AtEnd()
   {
     return m_iterator->AtEnd();
   }
 
-  void* GetComponentValue(const char* comonentName)
-  {
-    Diamond::ComponentId id = m_world->GetComponentId(comonentName);
-    return m_iterator->GetComponent(id);
-  }
+  void* GetComponentValue(ComponentId id);
 
 private:
-  Diamond::EcsWorld* m_world;
   Diamond::EcsIterator* m_iterator;
 };
 
+ComponentId _DefineComponent(const char* name, size_t size);
+ComponentId _ComponentId(const char* name);
+#define QuartzDefineComponent(type) Quartz::_DefineComponent(#type, sizeof(type))
+#define QuartzComponentId(type) Quartz::_ComponentId(#type)
+
 Renderable* CreateObject();
 void DestroyObject(Renderable* object);
-ObjectIterator CreateIterator(const std::vector<const char*>& componentNames);
 
 // ============================================================
 // Msc

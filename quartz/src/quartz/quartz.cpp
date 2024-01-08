@@ -22,9 +22,9 @@ Window* window;
 Renderer renderer;
 LayerStack layerStack;
 bool updateBlockedByOsInput = false;
-Diamond::EcsWorld ecsWorld;
+Diamond::EcsWorld globalEcsWorld;
 std::vector<Diamond::Entity> entities;
-Diamond::ComponentId renderableComponentId;
+ComponentId renderableComponentId;
 
 void EventCallback(Event& e)
 {
@@ -61,7 +61,7 @@ void Run()
   // Init rendering api
   renderer.Init(window);
 
-  renderableComponentId = ecsWorld.DefineComponent("renderable", sizeof(Renderable));
+  renderableComponentId = QuartzDefineComponent(Quartz::Renderable);
 
   PushLayer(GetGameLayer());
 
@@ -94,7 +94,7 @@ void Run()
       iterator++;
     }
 
-    Diamond::EcsIterator renderableIter(&ecsWorld, {renderableComponentId});
+    Diamond::EcsIterator renderableIter(&globalEcsWorld, {renderableComponentId});
     renderer.ClearRenderables();
     while (!renderableIter.AtEnd())
     {
@@ -115,7 +115,7 @@ void Run()
 
   //for (auto e : entities)
   //{
-  //  ecsWorld.DestroyEntity(e);
+  //  globalEcsWorld.DestroyEntity(e);
   //}
 
   renderer.Shutdown();
@@ -150,10 +150,6 @@ Material CreateMaterial(const std::vector<const char*>& shaderPaths)
   return renderer.CreateMaterial(shaderPaths);
 }
 
-//Mesh CreateMesh(const char* path)
-//{
-//  return g_renderer.CreateMesh(path);
-//}
 Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
 {
   return renderer.CreateMesh(vertices, indices);
@@ -177,16 +173,30 @@ void PopLayer(Layer* layer)
 // Objects
 // ============================================================
 
-Renderable* CreateObject()
+ComponentId _DefineComponent(const char* name, size_t size)
 {
-  entities.push_back(ecsWorld.CreateEntity());
-  return (Renderable*)ecsWorld.AddComponent(entities.back(), renderableComponentId);
+  return (ComponentId)globalEcsWorld.DefineComponent(name, size);
 }
 
-ObjectIterator CreateIterator(const std::vector<const char*>& componentNames)
+ComponentId _ComponentId(const char* name)
 {
-  ObjectIterator iter(&ecsWorld, componentNames);
-  return iter;
+  return globalEcsWorld.GetComponentId(name);
+}
+
+Renderable* CreateObject()
+{
+  entities.push_back(globalEcsWorld.CreateEntity());
+  return (Renderable*)globalEcsWorld.AddComponent(entities.back(), renderableComponentId);
+}
+
+ObjectIterator::ObjectIterator(const std::vector<ComponentId>& componentIds)
+{
+  m_iterator = new Diamond::EcsIterator(&globalEcsWorld, componentIds);
+}
+
+void* ObjectIterator::GetComponentValue(ComponentId id)
+{
+  return m_iterator->GetComponent(id);
 }
 
 } // namespace Quartz
