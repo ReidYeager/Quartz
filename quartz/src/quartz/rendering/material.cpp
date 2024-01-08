@@ -2,6 +2,7 @@
 #include "quartz/defines.h"
 #include "quartz/rendering/material.h"
 #include "quartz/platform/filesystem/filesystem.h"
+#include "quartz/rendering/rendering.h"
 
 namespace Quartz
 {
@@ -76,11 +77,17 @@ QuartzResult Material::InitShaders(const std::vector<const char*>& shaderPaths)
 
 QuartzResult Material::InitMaterial(OpalRenderpass renderpass)
 {
+  const uint32_t layoutCount = 2;
+  OpalInputLayout layouts[layoutCount] = {
+    Renderer::SceneLayout(),
+    m_layout
+  };
+
   OpalMaterialInitInfo materialInfo;
   materialInfo.renderpass = renderpass;
   materialInfo.subpassIndex = 0;
-  materialInfo.inputLayoutCount = 1;
-  materialInfo.pInputLayouts = &m_layout;
+  materialInfo.inputLayoutCount = layoutCount;
+  materialInfo.pInputLayouts = layouts;
   materialInfo.shaderCount = 2;
   materialInfo.pShaders = m_shaders;
   materialInfo.pushConstantSize = sizeof(Mat4);
@@ -103,7 +110,8 @@ QuartzResult Material::PushData(void* data)
 QuartzResult Material::Bind() const
 {
   OpalRenderBindMaterial(m_material);
-  OpalRenderBindInputSet(m_set, 0);
+  OpalRenderBindInputSet(Renderer::SceneSet(), 0);
+  OpalRenderBindInputSet(m_set, 1);
   return Quartz_Success;
 }
 

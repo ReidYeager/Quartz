@@ -1,9 +1,9 @@
 #version 450
 
-layout(set = 0, binding = 0) uniform CamStruct
+layout(set = 0, binding = 0) uniform SceneStruct
 {
     mat4 viewProj;
-} cam;
+} scene;
 
 layout(push_constant) uniform PustConstant
 {
@@ -21,6 +21,6 @@ layout(location = 0) out vec3 outPosition;
 void main()
 {
     vec4 worldPosition = pushConst.objectTransform * vec4(inPosition, 1.0);
-    gl_Position = cam.viewProj * worldPosition;
+    gl_Position = scene.viewProj * worldPosition;
     outPosition = worldPosition.xyz;
 }

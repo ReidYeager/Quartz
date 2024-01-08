@@ -8,6 +8,9 @@
 namespace Quartz
 {
 
+OpalInputLayout Renderer::m_sceneLayout;
+OpalInputSet Renderer::m_sceneSet;
+
 QuartzResult Renderer::Init(Window* window)
 {
   m_qWindow = window;
@@ -20,7 +23,7 @@ QuartzResult Renderer::Init(Window* window)
   };
 
   OpalInitInfo opalInfo;
-  opalInfo.debug = false;
+  opalInfo.debug = true;
   opalInfo.vertexStruct.count = vertexFormatCount;
   opalInfo.vertexStruct.pFormats = vertexFormats;
 
@@ -101,10 +104,44 @@ QuartzResult Renderer::Init(Window* window)
 
   QTZ_ATTEMPT_OPAL(OpalFramebufferInit(&m_framebuffer, framebufferInfo));
 
+  // ==============================
+  // Scene input set
+  // ==============================
+
+  OpalBufferInitInfo sceneBufferInfo = {};
+  sceneBufferInfo.size = sizeof(ScenePacket);
+  sceneBufferInfo.usage = Opal_Buffer_Usage_Uniform;
+
+  QTZ_ATTEMPT_OPAL(OpalBufferInit(&m_sceneBuffer, sceneBufferInfo));
+
+  OpalInputType sceneInputTypes[1] = { Opal_Input_Type_Uniform_Buffer };
+
+  OpalInputLayoutInitInfo sceneLayoutInfo = {};
+  sceneLayoutInfo.count = 1;
+  sceneLayoutInfo.pTypes = sceneInputTypes;
+
+  QTZ_ATTEMPT_OPAL(OpalInputLayoutInit(&m_sceneLayout, sceneLayoutInfo));
+
+  OpalMaterialInputValue sceneInputValues[1];
+  sceneInputValues[0].buffer = m_sceneBuffer;
+
+  OpalInputSetInitInfo sceneSetInfo = {};
+  sceneSetInfo.layout = m_sceneLayout;
+  sceneSetInfo.pInputValues = sceneInputValues;
+
+  QTZ_ATTEMPT_OPAL(OpalInputSetInit(&m_sceneSet, sceneSetInfo));
+
+  OpalInputInfo inputInfo[1] = {};
+  inputInfo[0].index = 0;
+  inputInfo[0].type = Opal_Input_Type_Uniform_Buffer;
+  inputInfo[0].value.buffer = m_sceneBuffer;
+
+  QTZ_ATTEMPT_OPAL(OpalInputSetUpdate(m_sceneSet, 1, inputInfo));
+
   return Quartz_Success;
 }
 
-QuartzResult Renderer::Render()
+QuartzResult Renderer::StartFrame()
 {
   OpalResult result = OpalRenderBegin(m_window);
   if (result != Opal_Success)
@@ -116,37 +153,44 @@ QuartzResult Renderer::Render()
   }
 
   OpalRenderBeginRenderpass(m_renderpass, m_framebuffer);
-  for (Renderable* r : m_renderables)
-  {
-    r->material.Bind();
-    OpalRenderSetPushConstant((void*)&r->transformMatrix);
-    r->mesh.Render();
-  }
-  OpalRenderEndRenderpass(m_renderpass);
-  QTZ_ATTEMPT_OPAL(OpalRenderEnd());
-
   return Quartz_Success;
 }
 
-void Renderer::SubmitRenderable(Renderable* renderable)
+QuartzResult Renderer::EndFrame()
 {
-  m_renderables.push_back(renderable);
+  OpalRenderEndRenderpass(m_renderpass);
+  QTZ_ATTEMPT_OPAL(OpalRenderEnd());
+  return Quartz_Success;
 }
 
-void Renderer::ClearRenderables()
+QuartzResult Renderer::Render(Renderable* renderable)
 {
-  m_renderables.clear();
+  renderable->material.Bind();
+  OpalRenderSetPushConstant((void*)&renderable->transformMatrix);
+  renderable->mesh.Render();
+
+  return Quartz_Success;
 }
 
 void Renderer::Shutdown()
 {
   OpalWaitIdle();
 
+  OpalBufferShutdown(&m_sceneBuffer);
+  OpalInputLayoutShutdown(&m_sceneLayout);
+  OpalInputSetShutdown(&m_sceneSet);
+
   OpalFramebufferShutdown(&m_framebuffer);
   OpalRenderpassShutdown(&m_renderpass);
   OpalImageShutdown(&m_depthImage);
   OpalWindowShutdown(&m_window);
   OpalShutdown();
+}
+
+QuartzResult Renderer::PushSceneData(ScenePacket* sceneInfo)
+{
+  QTZ_ATTEMPT_OPAL(OpalBufferPushData(m_sceneBuffer, (void*)sceneInfo));
+  return Quartz_Success;
 }
 
 QuartzResult Renderer::Resize(uint32_t width, uint32_t height)

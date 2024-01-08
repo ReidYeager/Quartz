@@ -13,6 +13,11 @@
 namespace Quartz
 {
 
+struct ScenePacket
+{
+  Mat4 cameraViewProjectionMatrix;
+};
+
 struct Renderable
 {
   class Mesh mesh;
@@ -24,10 +29,16 @@ class Renderer
 {
 public:
   QuartzResult Init(Window* window);
-  void SubmitRenderable(Renderable* renderable);
-  QuartzResult Render();
-  void ClearRenderables();
   void Shutdown();
+
+  QuartzResult StartFrame();
+  QuartzResult EndFrame();
+  QuartzResult Render(Renderable* renderable);
+
+  static OpalInputLayout SceneLayout() { return m_sceneLayout; }
+  static OpalInputSet SceneSet() { return m_sceneSet; }
+
+  QuartzResult PushSceneData(ScenePacket* sceneInfo);
 
   QuartzResult Resize(uint32_t width, uint32_t height);
 
@@ -45,14 +56,9 @@ private:
   OpalRenderpass m_renderpass;
   OpalFramebuffer m_framebuffer;
 
-  std::vector<Renderable*> m_renderables;
-
-  Transform m_camTransform = transformIdentity;
-  Mat4 m_camProjection = mat4Identity;
-  Mat4 m_cameraMatrix = mat4Identity;
-
-  Transform m_objectTransform = transformIdentity;
-
+  static OpalInputLayout m_sceneLayout;
+  static OpalInputSet m_sceneSet;
+  OpalBuffer m_sceneBuffer;
 };
 
 } // namespace Quartz

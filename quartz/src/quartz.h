@@ -31,6 +31,15 @@ uint32_t WindowGetHeight();
 // Rendering
 // ============================================================
 
+struct Camera
+{
+  float fov;
+  float desiredRatio;
+  float nearClip;
+  float farClip;
+  Mat4 projectionMatrix;
+};
+
 Material CreateMaterial(const std::vector<const char*>& shaderPaths);
 Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
 
@@ -49,12 +58,13 @@ typedef Diamond::ComponentId ComponentId;
 
 ComponentId _DefineComponent(const char* name, size_t size);
 ComponentId _ComponentId(const char* name);
-#define QuartzDefineComponent(type) Quartz::_DefineComponent(#type, sizeof(type))
-#define QuartzComponentId(type) Quartz::_ComponentId(#type)
+#define QuartzDefineComponent(type) Quartz::_DefineComponent(typeid(type).name(), sizeof(type))
+#define QuartzComponentId(type) Quartz::_ComponentId(typeid(type).name())
 
 bool HasComponent(Diamond::Entity, ComponentId id);
 void* AddComponent(Diamond::Entity, ComponentId id);
 void* GetComponent(Diamond::Entity, ComponentId id);
+void RemoveComponent(Diamond::Entity, ComponentId id);
 
 class Entity
 {
@@ -62,9 +72,14 @@ public:
   Entity();
   ~Entity();
 
-  bool Has(ComponentId id) { return HasComponent(m_id, id); }
-  void* Add(ComponentId id) { return AddComponent(m_id, id); }
-  void* Get(ComponentId id) { return GetComponent(m_id, id); }
+  template<typename T>
+  inline bool Has() { return HasComponent(m_id, Quartz::_ComponentId(typeid(T).name())); }
+  template<typename T>
+  inline void Remove() { RemoveComponent(m_id, Quartz::_ComponentId(typeid(T).name())); }
+  template<typename T>
+  inline T* Add() { return (T*)AddComponent(m_id, Quartz::_ComponentId(typeid(T).name())); }
+  template<typename T>
+  inline T* Get() { return (T*)GetComponent(m_id, Quartz::_ComponentId(typeid(T).name())); }
 
 private:
   Diamond::Entity m_id;
@@ -90,7 +105,11 @@ public:
     return m_iterator->AtEnd();
   }
 
-  void* GetComponentValue(ComponentId id);
+  template<typename T>
+  T* Get()
+  {
+    return (T*)m_iterator->GetComponent(Quartz::_ComponentId(typeid(T).name()));
+  }
 
 private:
   Diamond::EcsIterator* m_iterator;

@@ -24,19 +24,18 @@ LayerStack layerStack;
 bool updateBlockedByOsInput = false;
 Diamond::EcsWorld globalEcsWorld;
 std::vector<Diamond::Entity> entities;
+ComponentId cameraComponentId;
 ComponentId renderableComponentId;
 ComponentId transformComponentId;
 
 void EventCallback(Event& e)
 {
-  //QTZ_DEBUG("{} : {}", e.GetTypeNameDebug(), e.ToString_Debug());
   updateBlockedByOsInput |= e.HasCategory(Event_Category_Window);
   if (e.GetType() == Event_Window_Resize)
   {
     EventWindowResize* resize = (EventWindowResize*)&e;
     // Adjust camera projections that point to the swapbuffer
     renderer.Resize(resize->GetWidth(), resize->GetHeight());
-    renderer.Render();
   }
 
   for (auto iterator = layerStack.EndIterator(); iterator != layerStack.BeginIterator(); )
@@ -62,8 +61,9 @@ void Run()
   // Init rendering api
   renderer.Init(window);
 
-  renderableComponentId = QuartzDefineComponent(Quartz::Renderable);
   transformComponentId = QuartzDefineComponent(Transform);
+  renderableComponentId = QuartzDefineComponent(Renderable);
+  cameraComponentId = QuartzDefineComponent(Camera);
 
   PushLayer(GetGameLayer());
 
@@ -76,6 +76,8 @@ void Run()
 
   time.frameCount = 0;
   time.totalTimeDeltaSum = 0.0;
+
+  ScenePacket scenePacket = {};
 
   while (!window->ShouldClose())
   {
@@ -96,26 +98,42 @@ void Run()
       iterator++;
     }
 
+    Diamond::EcsIterator camerasIter(&globalEcsWorld, { cameraComponentId, transformComponentId });
     Diamond::EcsIterator renderableIter(&globalEcsWorld, { renderableComponentId, transformComponentId });
-    renderer.ClearRenderables();
-    while (!renderableIter.AtEnd())
+
+    if (!window->Minimized())
     {
-      Renderable* r = (Renderable*)renderableIter.GetComponent(renderableComponentId);
-      Transform* t = (Transform*)renderableIter.GetComponent(transformComponentId);
+      renderer.StartFrame();
+    }
 
-      r->transformMatrix = TransformToMat4(*t);
+    while (!camerasIter.AtEnd())
+    {
+      Transform* camTransform = (Transform*)camerasIter.GetComponent(transformComponentId);
+      Camera* cam = (Camera*)camerasIter.GetComponent(cameraComponentId);
+      scenePacket.cameraViewProjectionMatrix = Mat4MuliplyMat4(cam->projectionMatrix, Mat4Invert(TransformToMat4(*camTransform)));
+      renderer.PushSceneData(&scenePacket);
 
-      if (!window->Minimized())
+      while (!renderableIter.AtEnd())
       {
-        renderer.SubmitRenderable(r);
+        Renderable* r = (Renderable*)renderableIter.GetComponent(renderableComponentId);
+        Transform* t = (Transform*)renderableIter.GetComponent(transformComponentId);
+
+        r->transformMatrix = TransformToMat4(*t);
+
+        if (!window->Minimized())
+        {
+          renderer.Render(r);
+        }
+
+        renderableIter.StepNextElement();
       }
 
-      renderableIter.StepNextElement();
+      camerasIter.StepNextElement();
     }
 
     if (!window->Minimized())
     {
-      renderer.Render();
+      renderer.EndFrame();
     }
 
     time.frameCount++;
@@ -202,7 +220,6 @@ Entity::Entity()
 {
   m_id = globalEcsWorld.CreateEntity();
   AddComponent(m_id, QuartzComponentId(Transform));
-  AddComponent(m_id, QuartzComponentId(Quartz::Renderable));
   //entities.push_back(m_id);
 }
 
@@ -226,14 +243,14 @@ void* GetComponent(Diamond::Entity e, ComponentId id)
   return globalEcsWorld.GetComponent(e, (Diamond::ComponentId)id);
 }
 
+void RemoveComponent(Diamond::Entity e, ComponentId id)
+{
+  globalEcsWorld.RemoveComponent(e, (Diamond::ComponentId)id);
+}
+
 ObjectIterator::ObjectIterator(const std::vector<ComponentId>& componentIds)
 {
   m_iterator = new Diamond::EcsIterator(&globalEcsWorld, componentIds);
-}
-
-void* ObjectIterator::GetComponentValue(ComponentId id)
-{
-  return m_iterator->GetComponent(id);
 }
 
 } // namespace Quartz
