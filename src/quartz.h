@@ -45,6 +45,7 @@ struct Camera
 
 Material CreateMaterial(const std::vector<const char*>& shaderPaths);
 Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
+Mesh CreateMesh(const char* path);
 
 // ============================================================
 // Layers

@@ -317,14 +317,22 @@ QuartzResult Renderer::Resize(uint32_t width, uint32_t height)
 Material Renderer::CreateMaterial(const std::vector<const char*>& shaderPaths)
 {
   Material newMaterial;
-  newMaterial.Init(m_renderpass, shaderPaths);
+  if (newMaterial.Init(m_renderpass, shaderPaths))
+  {
+    QTZ_ERROR("Failed to create the material");
+    // TODO : Proper error handling
+  }
   return newMaterial;
 }
 
 Mesh Renderer::CreateMesh(const char* path)
 {
   Mesh m;
-  
+  if (m.Init(path))
+  {
+    QTZ_ERROR("Failed to create the mesh ({})", path);
+    // TODO : Proper error handling
+  }
 
   return m;
 }
@@ -335,6 +343,7 @@ Mesh Renderer::CreateMesh(const std::vector<Vertex>& vertices, const std::vector
   if (newMesh.Init(vertices, indices) != Quartz_Success)
   {
     QTZ_ATTEMPT_FAIL_LOG("Failed to build mesh");
+    // TODO : Proper error handling
   }
 
   return newMesh;

@@ -218,6 +218,11 @@ Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>
   return renderer.CreateMesh(vertices, indices);
 }
 
+Mesh CreateMesh(const char* path)
+{
+  return renderer.CreateMesh(path);
+}
+
 // ============================================================
 // Layers
 // ============================================================

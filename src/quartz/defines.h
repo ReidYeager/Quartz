@@ -8,6 +8,7 @@ enum QuartzResult
 {
   Quartz_Success = 0,
   Quartz_Failure,
+  Quartz_Failure_Vendor,
 };
 
 namespace Quartz
@@ -26,7 +27,7 @@ extern uint32_t g_quartzAttemptDepth;
     {                                                                                         \
       __VA_ARGS__;                                                                            \
     }                                                                                         \
-    return Quartz_Failure;                                                                    \
+    return result;                                                                            \
   }                                                                                           \
 }
 

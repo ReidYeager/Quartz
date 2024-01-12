@@ -18,6 +18,8 @@ set_property(GLOBAL PROPERTY VendorQuartzSource
   ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_widgets.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_vulkan.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_win32.cpp
+  
+  ${CMAKE_CURRENT_SOURCE_DIR}/header_only/tiny_obj_loader.h
 )
 
 target_include_directories(VendorQuartz INTERFACE
@@ -26,6 +28,7 @@ target_include_directories(VendorQuartz INTERFACE
   ./peridot/include/
   ./spdlog/include/
   ./imgui/
+  ./header_only/
 )
 
 target_link_libraries(VendorQuartz INTERFACE

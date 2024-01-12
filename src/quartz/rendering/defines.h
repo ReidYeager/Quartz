@@ -20,7 +20,7 @@ namespace Quartz
     {                                                                                                \
       __VA_ARGS__;                                                                                   \
     }                                                                                                \
-    return Quartz_Failure;                                                                           \
+    return Quartz_Failure_Vendor;                                                                    \
   }                                                                                                  \
 }
 
@@ -29,6 +29,11 @@ struct Vertex
   Vec3 position;
   //Vec2 uv;
   //Vec3 normal;
+
+  bool operator==(const Vertex& other) const
+  {
+    return Vec3Compare(position, other.position); // && Vec3Compare(normal, other.normal) && Vec2Compare(uv, other.uv);
+  }
 };
 
 } // namespace Quartz
