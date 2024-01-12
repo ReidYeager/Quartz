@@ -1,15 +1,15 @@
 [submodule "quartz/vendor/spdlog"]
-	path = quartz/vendor/spdlog
+	path = vendor/spdlog
 	url = https://github.com/gabime/spdlog
 [submodule "quartz/vendor/opal"]
-	path = quartz/vendor/opal
+	path = vendor/opal
 	url = https://github.com/ReidYeager/Opal
 [submodule "quartz/vendor/peridot"]
-	path = quartz/vendor/peridot
+	path = vendor/peridot
 	url = https://github.com/ReidYeager/Peridot
 [submodule "quartz/vendor/diamond"]
-	path = quartz/vendor/diamond
+	path = vendor/diamond
 	url = https://github.com/ReidYeager/Diamond
 [submodule "quartz/vendor/imgui"]
-	path = quartz/vendor/imgui
+	path = vendor/imgui
 	url = https://github.com/ocornut/imgui
