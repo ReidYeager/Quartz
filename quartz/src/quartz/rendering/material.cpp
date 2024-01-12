@@ -6,7 +6,6 @@
 
 namespace Quartz
 {
-
 QuartzResult Material::Init(OpalRenderpass renderpass, const std::vector<const char*>& shaderPaths)
 {
   QTZ_ATTEMPT(InitInputLayout());
@@ -14,6 +13,8 @@ QuartzResult Material::Init(OpalRenderpass renderpass, const std::vector<const c
   QTZ_ATTEMPT(InitInputSet());
   QTZ_ATTEMPT(InitShaders(shaderPaths));
   QTZ_ATTEMPT(InitMaterial(renderpass));
+
+  m_valid = true;
   return Quartz_Success;
 }
 
@@ -120,6 +121,8 @@ void Material::Shutdown()
   OpalMaterialShutdown(&m_material);
   OpalInputSetShutdown(&m_set);
   OpalBufferShutdown(&m_buffer);
+
+  m_valid = false;
 }
 
 

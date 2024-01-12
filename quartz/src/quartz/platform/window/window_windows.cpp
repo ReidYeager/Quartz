@@ -103,7 +103,7 @@ QuartzResult WindowWin32::CreateWindow()
     QTZ_WIN32_WINDOW_CLASS_NAME,
     m_title,
     windowStyle,
-    50, // X screen position
+    1720, // X screen position
     50, // Y screen position
     adjustedWidth,
     adjustedHeight,
@@ -163,6 +163,8 @@ LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, 
 {
   if (thisWindow == nullptr)
     return DefWindowProcA(hwnd, message, wparam, lparam);
+
+  thisWindow->m_platformInputCallbackFunction(hwnd, message, wparam, lparam);
 
   switch (message)
   {

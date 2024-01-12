@@ -9,11 +9,23 @@ add_subdirectory("spdlog")
 
 add_library (VendorQuartz INTERFACE)
 
+define_property(GLOBAL PROPERTY VendorQuartzSource INHERITED)
+set_property(GLOBAL PROPERTY VendorQuartzSource
+  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_demo.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_draw.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_tables.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_widgets.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_vulkan.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_win32.cpp
+)
+
 target_include_directories(VendorQuartz INTERFACE
   ./opal/include/
   ./diamond/src/
   ./peridot/include/
   ./spdlog/include/
+  ./imgui/
 )
 
 target_link_libraries(VendorQuartz INTERFACE

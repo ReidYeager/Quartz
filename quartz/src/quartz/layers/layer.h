@@ -16,6 +16,7 @@ public:
   virtual void OnAttach() {}
   virtual void OnDetach() {}
   virtual void OnUpdate() {}
+  virtual void OnUpdateImgui() {}
   virtual void OnEvent(Event& e) {}
 
 protected:

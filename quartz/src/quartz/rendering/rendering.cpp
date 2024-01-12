@@ -5,11 +5,17 @@
 #include "quartz/platform/platform.h"
 #include "quartz/platform/filesystem/filesystem.h"
 
+#include <imgui.h>
+#include <backends/imgui_impl_win32.h>
+#include <backends/imgui_impl_vulkan.h>
+
 namespace Quartz
 {
 
 OpalInputLayout Renderer::m_sceneLayout;
 OpalInputSet Renderer::m_sceneSet;
+
+void ImguiVkResultCheck(VkResult error) {}
 
 QuartzResult Renderer::Init(Window* window)
 {
@@ -65,7 +71,7 @@ QuartzResult Renderer::Init(Window* window)
   attachments[0].format = Opal_Format_BGR8;
   attachments[0].loadOp = Opal_Attachment_Op_Clear;
   attachments[0].shouldStore = true;
-  attachments[0].usage = Opal_Attachment_Usage_Presented;
+  attachments[0].usage = Opal_Attachment_Usage_Color;
   // Depth image
   attachments[1].clearValue.depthStencil = OpalDepthStencilValue{ 1, 0 };
   attachments[1].format = Opal_Format_D24_S8;
@@ -138,6 +144,83 @@ QuartzResult Renderer::Init(Window* window)
 
   QTZ_ATTEMPT_OPAL(OpalInputSetUpdate(m_sceneSet, 1, inputInfo));
 
+  InitImgui();
+
+  return Quartz_Success;
+}
+
+QuartzResult Renderer::InitImgui()
+{
+  // Resources
+  // ============================================================
+
+  // Renderpass
+
+  OpalAttachmentInfo attachment = {};
+  attachment.clearValue.color = OpalColorValue{ 0.5f, 0.5f, 0.5f, 1.0f };
+  attachment.format = Opal_Format_BGRA8;
+  attachment.loadOp = Opal_Attachment_Op_Load;
+  attachment.shouldStore = true;
+  attachment.usage = Opal_Attachment_Usage_Presented;
+
+  uint32_t colorIndex = 0;
+  OpalSubpassInfo subpass = {};
+  subpass.depthAttachmentIndex = OPAL_DEPTH_ATTACHMENT_NONE;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachmentIndices = &colorIndex;
+  subpass.inputAttachmentCount = 0;
+  subpass.pInputColorAttachmentIndices = NULL;
+
+  OpalRenderpassInitInfo renderpassInfo = {};
+  renderpassInfo.dependencyCount = 0;
+  renderpassInfo.pDependencies = NULL;
+  renderpassInfo.imageCount = 1;
+  renderpassInfo.pAttachments = &attachment;
+  renderpassInfo.subpassCount = 1;
+  renderpassInfo.pSubpasses = &subpass;
+  QTZ_ATTEMPT_OPAL(OpalRenderpassInit(&m_imguiRenderpass, renderpassInfo));
+
+  // Framebuffer
+
+  OpalFramebufferInitInfo fbInfo = {};
+  fbInfo.imageCount = 1;
+  fbInfo.pImages = &m_window->renderBufferImage;
+  fbInfo.renderpass = m_imguiRenderpass;
+  QTZ_ATTEMPT_OPAL(OpalFramebufferInit(&m_imguiFramebuffer, fbInfo));
+
+  // Imgui
+  // ============================================================
+
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+  ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableSetMousePos;
+  //ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+  ImGui::StyleColorsDark();
+
+  ImGui_ImplWin32_Init(m_window->platform.hwnd);
+
+  ImGui_ImplVulkan_InitInfo imguiVulkanInfo = { 0 };
+  imguiVulkanInfo.Allocator = NULL;
+  imguiVulkanInfo.Instance = oState.vk.instance;
+  imguiVulkanInfo.Device = oState.vk.device;
+  imguiVulkanInfo.PhysicalDevice = oState.vk.gpu;
+  imguiVulkanInfo.QueueFamily = oState.vk.gpuInfo.queueIndexGraphics;
+  imguiVulkanInfo.Queue = oState.vk.queueGraphics;
+  imguiVulkanInfo.PipelineCache = VK_NULL_HANDLE;
+  imguiVulkanInfo.DescriptorPool = oState.vk.descriptorPool;
+  imguiVulkanInfo.Subpass = 0;
+  imguiVulkanInfo.MinImageCount = 2;
+  imguiVulkanInfo.ImageCount = m_window->imageCount;
+  imguiVulkanInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+  imguiVulkanInfo.CheckVkResultFn = ImguiVkResultCheck;
+  ImGui_ImplVulkan_Init(&imguiVulkanInfo, m_imguiRenderpass->vk.renderpass);
+
+  VkCommandBuffer cmd;
+  OpalBeginSingleUseCommand(oState.vk.transientCommandPool, &cmd);
+  ImGui_ImplVulkan_CreateFontsTexture();
+  OpalEndSingleUseCommand(oState.vk.transientCommandPool, oState.vk.queueTransfer, cmd);
+
   return Quartz_Success;
 }
 
@@ -152,22 +235,40 @@ QuartzResult Renderer::StartFrame()
       return Quartz_Failure;
   }
 
-  OpalRenderBeginRenderpass(m_renderpass, m_framebuffer);
   return Quartz_Success;
 }
 
 QuartzResult Renderer::EndFrame()
 {
-  OpalRenderEndRenderpass(m_renderpass);
   QTZ_ATTEMPT_OPAL(OpalRenderEnd());
   return Quartz_Success;
 }
 
+void Renderer::StartSceneRender()
+{
+  OpalRenderBeginRenderpass(m_renderpass, m_framebuffer);
+}
+
+void Renderer::EndSceneRender()
+{
+  OpalRenderEndRenderpass(m_renderpass);
+}
+
+void Renderer::StartImguiRender()
+{
+  OpalRenderBeginRenderpass(m_imguiRenderpass, m_imguiFramebuffer);
+}
+
+void Renderer::EndImguiRender()
+{
+  OpalRenderEndRenderpass(m_imguiRenderpass);
+}
+
 QuartzResult Renderer::Render(Renderable* renderable)
 {
-  renderable->material.Bind();
+  renderable->material->Bind();
   OpalRenderSetPushConstant((void*)&renderable->transformMatrix);
-  renderable->mesh.Render();
+  renderable->mesh->Render();
 
   return Quartz_Success;
 }
@@ -175,6 +276,10 @@ QuartzResult Renderer::Render(Renderable* renderable)
 void Renderer::Shutdown()
 {
   OpalWaitIdle();
+  
+  ImGui_ImplVulkan_Shutdown();
+  OpalFramebufferShutdown(&m_imguiFramebuffer);
+  OpalRenderpassShutdown(&m_imguiRenderpass);
 
   OpalBufferShutdown(&m_sceneBuffer);
   OpalInputLayoutShutdown(&m_sceneLayout);

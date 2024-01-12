@@ -17,6 +17,7 @@ public:
   QuartzResult PushData(void* data);
 
 private:
+  bool m_valid = false;
   OpalInputLayout m_layout;
   OpalBuffer m_buffer;
   OpalInputSet m_set;

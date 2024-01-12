@@ -20,8 +20,8 @@ struct ScenePacket
 
 struct Renderable
 {
-  class Mesh mesh;
-  class Material material;
+  class Mesh* mesh;
+  class Material* material;
   Mat4 transformMatrix;
 };
 
@@ -29,10 +29,16 @@ class Renderer
 {
 public:
   QuartzResult Init(Window* window);
+  QuartzResult InitImgui();
   void Shutdown();
 
   QuartzResult StartFrame();
   QuartzResult EndFrame();
+  void StartSceneRender();
+  void EndSceneRender();
+  void StartImguiRender();
+  void EndImguiRender();
+
   QuartzResult Render(Renderable* renderable);
 
   static OpalInputLayout SceneLayout() { return m_sceneLayout; }
@@ -59,6 +65,9 @@ private:
   static OpalInputLayout m_sceneLayout;
   static OpalInputSet m_sceneSet;
   OpalBuffer m_sceneBuffer;
+
+  OpalRenderpass m_imguiRenderpass;
+  OpalFramebuffer m_imguiFramebuffer;
 };
 
 } // namespace Quartz

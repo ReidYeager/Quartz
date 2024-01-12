@@ -10,8 +10,12 @@
 
 #include <diamond.h>
 
+#include <backends/imgui_impl_win32.h>
+
 #include <chrono>
 #include <math.h>
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace Quartz
 {
@@ -27,6 +31,11 @@ std::vector<Diamond::Entity> entities;
 ComponentId cameraComponentId;
 ComponentId renderableComponentId;
 ComponentId transformComponentId;
+
+void PlatformInputCallback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+  ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
+}
 
 void EventCallback(Event& e)
 {
@@ -57,7 +66,7 @@ void Run()
   // Create window
   window = CreateWindow();
   window->SetEventCallbackFunction(EventCallback);
-
+  window->SetPlatformInputCallbackFunction(PlatformInputCallback);
   // Init rendering api
   renderer.Init(window);
 
@@ -104,6 +113,7 @@ void Run()
     if (!window->Minimized())
     {
       renderer.StartFrame();
+      renderer.StartSceneRender();
     }
 
     while (!camerasIter.AtEnd())
@@ -133,6 +143,26 @@ void Run()
 
     if (!window->Minimized())
     {
+      renderer.EndSceneRender();
+      renderer.StartImguiRender();
+
+      ImGui_ImplVulkan_NewFrame();
+      ImGui_ImplWin32_NewFrame();
+      ImGui::NewFrame();
+
+      for (auto iterator = layerStack.BeginIterator(); iterator != layerStack.EndIterator(); )
+      {
+        (*iterator)->OnUpdateImgui();
+        iterator++;
+      }
+
+      ImGui::EndFrame();
+      ImGui::Render();
+
+      ImDrawData* drawData = ImGui::GetDrawData();
+      ImGui_ImplVulkan_RenderDrawData(drawData, OpalRenderGetCommandBuffer());
+
+      renderer.EndImguiRender();
       renderer.EndFrame();
     }
 

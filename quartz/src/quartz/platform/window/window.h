@@ -17,11 +17,13 @@ struct WindowPlatformInfo
   HWND hwnd;
   HINSTANCE hinstance;
 };
+typedef void(*InputCallbackFunction_T)(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #else
 struct WindowPlatformInfo
 {
   int none;
 };
+typedef void(*InputCallbackFunction_T)();
 #endif // QTZ_PLATFORM_WIN32
 
 class Window
@@ -31,6 +33,7 @@ public:
 
   virtual QuartzResult Init() = 0;
   void SetEventCallbackFunction(const std::function<void(Event&)>& function) { m_eventCallbackFunction = function; }
+  void SetPlatformInputCallbackFunction(InputCallbackFunction_T function) { m_platformInputCallbackFunction = function; }
   virtual void Shutdown() = 0;
   virtual void PollEvents() = 0;
 
@@ -45,6 +48,7 @@ public:
 protected:
   Input m_input;
   std::function<void(Event&)> m_eventCallbackFunction;
+  InputCallbackFunction_T m_platformInputCallbackFunction;
   WindowPlatformInfo m_platformInfo;
   //uint32_t m_width = 480, m_height = 360;
   uint32_t m_width = 1280, m_height = 720;

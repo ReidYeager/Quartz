@@ -63,14 +63,6 @@ public:
     // Entities
     // ============================================================
 
-    Quartz::Renderable baseRenderable{};
-    baseRenderable.material = m_mat;
-    baseRenderable.mesh = m_mesh;
-    baseRenderable.transformMatrix = TransformToMat4(transformIdentity);
-
-    Quartz::ComponentId renderableId = QuartzComponentId(Quartz::Renderable);
-    Quartz::ComponentId transformId = QuartzComponentId(Transform);
-
     Vec3 positions[4] = {
       { 0.0f, 0.0f, 1.0f },
       { 2.0f, 1.0f, 2.0f },
@@ -86,8 +78,8 @@ public:
       t->position = positions[i];
 
       Quartz::Renderable* r = m_entities[i].Add<Quartz::Renderable>();
-      r->material = m_mat;
-      r->mesh = m_mesh;
+      r->material = &m_mat;
+      r->mesh = &m_mesh;
     }
   }
 
@@ -98,28 +90,32 @@ public:
       Quartz::Quit();
     }
 
+    Transform* t = m_camera.Get<Transform>();
     if (Quartz::Input::ButtonStatus(Quartz::Mouse_Right))
     {
-      Transform* t = m_camera.Get<Transform>();
       Vec2I mouseMove = Quartz::Input::GetMouseDelta();
-      t->rotation.x += mouseMove.y;
-      t->rotation.y += mouseMove.x;
-
-      Quaternion rotQ = QuaternionFromEuler(t->rotation);
-      Vec3 forward = QuaternionMultiplyVec3(rotQ, Vec3{0.0f, 0.0f, -1.0f});
-      Vec3 right = QuaternionMultiplyVec3(rotQ, Vec3{1.0f, 0.0f, 0.0f});
-
-      forward = Vec3MultiplyFloat(forward, Quartz::Input::ButtonStatus(Quartz::Key_W) - Quartz::Input::ButtonStatus(Quartz::Key_S));
-      right = Vec3MultiplyFloat(right, Quartz::Input::ButtonStatus(Quartz::Key_D) - Quartz::Input::ButtonStatus(Quartz::Key_A));
-      Vec3 up = Vec3MultiplyFloat(Vec3{0.0f, 1.0f, 0.0f}, Quartz::Input::ButtonStatus(Quartz::Key_E) - Quartz::Input::ButtonStatus(Quartz::Key_Q));
-
-      Vec3 movement = Vec3Normalize(Vec3AddVec3(Vec3AddVec3(forward, right), up));
-      movement = Vec3MultiplyFloat(movement, Quartz::time.deltaTime * (1 + (3 * Quartz::Input::ButtonStatus(Quartz::Key_Shift_L))));
-
-      t->position = Vec3AddVec3(movement, t->position);
-      //QTZ_INFO("Cam pos ({}, {}, {})", t->position.x, t->position.y, t->position.z);
+      t->rotation.x += mouseMove.y * m_cameraSensitivity;
+      t->rotation.y += mouseMove.x * m_cameraSensitivity;
     }
 
+    // Cam movement
+    // ============================================================
+    Quaternion rotQ = QuaternionFromEuler(t->rotation);
+    Vec3 forward = QuaternionMultiplyVec3(rotQ, Vec3{ 0.0f, 0.0f, -1.0f });
+    Vec3 right = QuaternionMultiplyVec3(rotQ, Vec3{ 1.0f, 0.0f, 0.0f });
+
+    forward = Vec3MultiplyFloat(forward, Quartz::Input::ButtonStatus(Quartz::Key_W) - Quartz::Input::ButtonStatus(Quartz::Key_S));
+    right = Vec3MultiplyFloat(right, Quartz::Input::ButtonStatus(Quartz::Key_D) - Quartz::Input::ButtonStatus(Quartz::Key_A));
+    Vec3 up = Vec3MultiplyFloat(Vec3{ 0.0f, 1.0f, 0.0f }, Quartz::Input::ButtonStatus(Quartz::Key_E) - Quartz::Input::ButtonStatus(Quartz::Key_Q));
+
+    Vec3 movement = Vec3Normalize(Vec3AddVec3(Vec3AddVec3(forward, right), up));
+    movement = Vec3MultiplyFloat(movement, Quartz::time.deltaTime * (1 + (3 * Quartz::Input::ButtonStatus(Quartz::Key_Shift_L))));
+
+    t->position = Vec3AddVec3(movement, t->position);
+    //QTZ_INFO("Cam pos ({}, {}, {})", t->position.x, t->position.y, t->position.z);
+
+    // Update cubes
+    // ============================================================
     for (uint32_t i = 0; i < 4; i++)
     {
       Transform* r = m_entities[i].Get<Transform>();
@@ -128,6 +124,16 @@ public:
       r->rotation.z += Quartz::time.deltaTime * 30.0f * (i + 1);
       r->position.x = sin(Quartz::time.totalTimeDeltaSum / (i + 1)) * i * 3;
     }
+  }
+
+  void OnUpdateImgui() override
+  {
+    ImGui::Begin("Test game thing");
+
+    Transform* t = m_camera.Get<Transform>();
+    ImGui::Text("Camera at : (%f, %f, %f)", t->position.x, t->position.y, t->position.z);
+
+    ImGui::End();
   }
 
   void OnDetach() override
@@ -144,7 +150,6 @@ public:
     if (e.GetType() == Quartz::Event_Window_Resize)
     {
       Quartz::Camera* camStruct = m_camera.Get<Quartz::Camera>();
-      Transform* camTransform = m_camera.Get<Transform>();
 
       float screenRatio = (float)Quartz::WindowGetWidth() / (float)Quartz::WindowGetHeight();
       camStruct->projectionMatrix = ProjectionPerspectiveExtended(
@@ -157,6 +162,7 @@ public:
   }
 
 private:
+  const float m_cameraSensitivity = 0.2f;
   std::vector<Quartz::Renderable*> renderables;
   Quartz::Entity m_camera;
   std::vector<Quartz::Entity> m_entities;

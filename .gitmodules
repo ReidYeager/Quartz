@@ -10,3 +10,6 @@
 [submodule "quartz/vendor/diamond"]
 	path = quartz/vendor/diamond
 	url = https://github.com/ReidYeager/Diamond
+[submodule "quartz/vendor/imgui"]
+	path = quartz/vendor/imgui
+	url = https://github.com/ocornut/imgui

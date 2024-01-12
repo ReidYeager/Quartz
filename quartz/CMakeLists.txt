@@ -11,9 +11,14 @@ add_subdirectory("vendor")
 file(GLOB_RECURSE HeaderFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/**.h")
 file(GLOB_RECURSE CppSourceFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/**.cpp")
 
+get_property(VendorSource GLOBAL PROPERTY VendorQuartzSource)
+
+message("${HeaderFiles};${CppSourceFiles};${VendorSource}")
+
 add_library (Quartz STATIC
   ${HeaderFiles}
   ${CppSourceFiles}
+  ${VendorSource}
 )
 
 target_include_directories (Quartz PUBLIC
