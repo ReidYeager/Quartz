@@ -7,6 +7,7 @@
 #include "quartz/rendering/defines.h"
 #include "quartz/rendering/material.h"
 #include "quartz/rendering/mesh.h"
+#include "quartz/rendering/texture.h"
 
 #include <peridot.h>
 
@@ -51,6 +52,7 @@ public:
   Material CreateMaterial(const std::vector<const char*>& shaderPaths);
   Mesh CreateMesh(const char* path);
   Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
+  Texture CreateTexture(const char* path);
 
 private:
   Window* m_qWindow;
@@ -68,6 +70,7 @@ private:
 
   OpalRenderpass m_imguiRenderpass;
   OpalFramebuffer m_imguiFramebuffer;
+  OpalInputLayout m_imguiImageLayout;
 };
 
 } // namespace Quartz

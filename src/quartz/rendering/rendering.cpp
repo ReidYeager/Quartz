@@ -120,15 +120,17 @@ QuartzResult Renderer::Init(Window* window)
 
   QTZ_ATTEMPT_OPAL(OpalBufferInit(&m_sceneBuffer, sceneBufferInfo));
 
-  OpalInputType sceneInputTypes[1] = { Opal_Input_Type_Uniform_Buffer };
+  OpalInputAccessInfo sceneInputs[1] = {
+    { Opal_Input_Type_Uniform_Buffer, Opal_Stage_All_Graphics }
+  };
 
   OpalInputLayoutInitInfo sceneLayoutInfo = {};
   sceneLayoutInfo.count = 1;
-  sceneLayoutInfo.pTypes = sceneInputTypes;
+  sceneLayoutInfo.pInputs = sceneInputs;
 
   QTZ_ATTEMPT_OPAL(OpalInputLayoutInit(&m_sceneLayout, sceneLayoutInfo));
 
-  OpalMaterialInputValue sceneInputValues[1];
+  OpalInputValue sceneInputValues[1];
   sceneInputValues[0].buffer = m_sceneBuffer;
 
   OpalInputSetInitInfo sceneSetInfo = {};
@@ -187,6 +189,16 @@ QuartzResult Renderer::InitImgui()
   fbInfo.pImages = &m_window->renderBufferImage;
   fbInfo.renderpass = m_imguiRenderpass;
   QTZ_ATTEMPT_OPAL(OpalFramebufferInit(&m_imguiFramebuffer, fbInfo));
+
+  // Input layout
+
+  OpalInputAccessInfo input = { Opal_Input_Type_Samped_Image, Opal_Stage_Fragment };
+
+  OpalInputLayoutInitInfo layoutInfo = {};
+  layoutInfo.count = 1;
+  layoutInfo.pInputs = &input;
+
+  QTZ_ATTEMPT_OPAL(OpalInputLayoutInit(&m_imguiImageLayout, layoutInfo));
 
   // Imgui
   // ============================================================
@@ -278,6 +290,7 @@ void Renderer::Shutdown()
   OpalWaitIdle();
   
   ImGui_ImplVulkan_Shutdown();
+  OpalInputLayoutShutdown(&m_imguiImageLayout);
   OpalFramebufferShutdown(&m_imguiFramebuffer);
   OpalRenderpassShutdown(&m_imguiRenderpass);
 
@@ -347,6 +360,17 @@ Mesh Renderer::CreateMesh(const std::vector<Vertex>& vertices, const std::vector
   }
 
   return newMesh;
+}
+
+Texture Renderer::CreateTexture(const char* path)
+{
+  Texture newTexture;
+  if (newTexture.Init(path, m_imguiImageLayout) != Quartz_Success)
+  {
+    QTZ_ATTEMPT_FAIL_LOG("Failed to create texture");
+    // TODO : Proper error handling
+  }
+  return newTexture;
 }
 
 } // namespace Quartz

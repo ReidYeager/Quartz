@@ -20,13 +20,13 @@ QuartzResult Material::Init(OpalRenderpass renderpass, const std::vector<const c
 
 QuartzResult Material::InitInputLayout()
 {
-  OpalInputType inputTypes[1] = {
-      Opal_Input_Type_Uniform_Buffer
+  OpalInputAccessInfo inputs[1] = {
+      { Opal_Input_Type_Uniform_Buffer, Opal_Stage_All_Graphics }
   };
 
   OpalInputLayoutInitInfo layoutInfo;
   layoutInfo.count = 1;
-  layoutInfo.pTypes = inputTypes;
+  layoutInfo.pInputs = inputs;
 
   QTZ_ATTEMPT_OPAL(OpalInputLayoutInit(&m_layout, layoutInfo));
 
@@ -45,7 +45,7 @@ QuartzResult Material::InitBuffer()
 
 QuartzResult Material::InitInputSet()
 {
-  OpalMaterialInputValue values[1];
+  OpalInputValue values[1];
   values[0].buffer = m_buffer;
 
   OpalInputSetInitInfo setInfo;

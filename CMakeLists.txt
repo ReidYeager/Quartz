@@ -15,6 +15,8 @@ file(GLOB_RECURSE CppSourceFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/
 
 get_property(VendorSource GLOBAL PROPERTY VendorQuartzSource)
 
+message("${VendorSource}")
+
 add_library (Quartz STATIC
   ${HeaderFiles}
   ${CppSourceFiles}

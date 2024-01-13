@@ -223,6 +223,11 @@ Mesh CreateMesh(const char* path)
   return renderer.CreateMesh(path);
 }
 
+Texture CreateTexture(const char* path)
+{
+  return renderer.CreateTexture(path);
+}
+
 // ============================================================
 // Layers
 // ============================================================
