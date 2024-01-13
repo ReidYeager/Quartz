@@ -12,6 +12,7 @@ namespace Quartz
 class Texture
 {
   friend class Renderer;
+  friend class Material;
 
 public:
   void Shutdown();

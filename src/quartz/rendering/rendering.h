@@ -49,7 +49,7 @@ public:
 
   QuartzResult Resize(uint32_t width, uint32_t height);
 
-  Material CreateMaterial(const std::vector<const char*>& shaderPaths);
+  Material CreateMaterial(const std::vector<const char*>& shaderPaths, const std::vector<MaterialInput>& inputs);
   Mesh CreateMesh(const char* path);
   Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
   Texture CreateTexture(const char* path);

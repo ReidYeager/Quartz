@@ -6,30 +6,14 @@
 
 namespace Quartz
 {
-QuartzResult Material::Init(OpalRenderpass renderpass, const std::vector<const char*>& shaderPaths)
+QuartzResult Material::Init(OpalRenderpass renderpass, const std::vector<const char*>& shaderPaths, const std::vector<MaterialInput>& inputs)
 {
-  QTZ_ATTEMPT(InitInputLayout());
   QTZ_ATTEMPT(InitBuffer());
-  QTZ_ATTEMPT(InitInputSet());
+  QTZ_ATTEMPT(InitInputs(inputs));
   QTZ_ATTEMPT(InitShaders(shaderPaths));
   QTZ_ATTEMPT(InitMaterial(renderpass));
 
   m_valid = true;
-  return Quartz_Success;
-}
-
-QuartzResult Material::InitInputLayout()
-{
-  OpalInputAccessInfo inputs[1] = {
-      { Opal_Input_Type_Uniform_Buffer, Opal_Stage_All_Graphics }
-  };
-
-  OpalInputLayoutInitInfo layoutInfo;
-  layoutInfo.count = 1;
-  layoutInfo.pInputs = inputs;
-
-  QTZ_ATTEMPT_OPAL(OpalInputLayoutInit(&m_layout, layoutInfo));
-
   return Quartz_Success;
 }
 
@@ -43,14 +27,35 @@ QuartzResult Material::InitBuffer()
   return Quartz_Success;
 }
 
-QuartzResult Material::InitInputSet()
+QuartzResult Material::InitInputs(const std::vector<MaterialInput>& inputs)
 {
-  OpalInputValue values[1];
-  values[0].buffer = m_buffer;
+  std::vector<OpalInputAccessInfo> infos(inputs.size());
+  std::vector<OpalInputValue> values(inputs.size());
+
+  for (uint32_t i = 0; i < values.size(); i++)
+  {
+    infos[i].stages = Opal_Stage_All_Graphics;
+
+    switch (inputs[i].type)
+    {
+    case Input_Texture:
+    {
+      values[i].image = inputs[i].texture.m_opalImage;
+      infos[i].type = Opal_Input_Type_Samped_Image;
+    } break;
+    default: return Quartz_Failure;
+    }
+  }
+
+  OpalInputLayoutInitInfo layoutInfo;
+  layoutInfo.count = infos.size();
+  layoutInfo.pInputs = infos.data();
+
+  QTZ_ATTEMPT_OPAL(OpalInputLayoutInit(&m_layout, layoutInfo));
 
   OpalInputSetInitInfo setInfo;
   setInfo.layout = m_layout;
-  setInfo.pInputValues = values;
+  setInfo.pInputValues = values.data();
 
   QTZ_ATTEMPT_OPAL(OpalInputSetInit(&m_set, setInfo));
   return Quartz_Success;

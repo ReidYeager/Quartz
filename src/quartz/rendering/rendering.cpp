@@ -21,11 +21,11 @@ QuartzResult Renderer::Init(Window* window)
 {
   m_qWindow = window;
 
-  const uint32_t vertexFormatCount = 1;
+  const uint32_t vertexFormatCount = 3;
   OpalFormat vertexFormats[vertexFormatCount] = {
     Opal_Format_RGB32, // Position
-    //Opal_Format_RG32, // Uv
-    //Opal_Format_RGB32, // Normal
+    Opal_Format_RG32, // Uv
+    Opal_Format_RGB32, // Normal
   };
 
   OpalInitInfo opalInfo;
@@ -327,10 +327,10 @@ QuartzResult Renderer::Resize(uint32_t width, uint32_t height)
   return Quartz_Success;
 }
 
-Material Renderer::CreateMaterial(const std::vector<const char*>& shaderPaths)
+Material Renderer::CreateMaterial(const std::vector<const char*>& shaderPaths, const std::vector<MaterialInput>& inputs)
 {
   Material newMaterial;
-  if (newMaterial.Init(m_renderpass, shaderPaths))
+  if (newMaterial.Init(m_renderpass, shaderPaths, inputs))
   {
     QTZ_ERROR("Failed to create the material");
     // TODO : Proper error handling

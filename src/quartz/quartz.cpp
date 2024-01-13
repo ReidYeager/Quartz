@@ -208,9 +208,9 @@ uint32_t WindowGetHeight()
 // Rendering
 // ============================================================
 
-Material CreateMaterial(const std::vector<const char*>& shaderPaths)
+Material CreateMaterial(const std::vector<const char*>& shaderPaths, const std::vector<MaterialInput>& inputs)
 {
-  return renderer.CreateMaterial(shaderPaths);
+  return renderer.CreateMaterial(shaderPaths, inputs);
 }
 
 Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)

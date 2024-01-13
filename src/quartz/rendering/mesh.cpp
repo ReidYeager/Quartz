@@ -21,8 +21,8 @@ template<> struct hash<Quartz::Vertex>
   {
     // Keep all bits, don't round
     Vec3I* iPos = (Vec3I*)&vertex.position;
-    //Vec3I* iNor = (Vec3I*)&vertex.normal;
-    //Vec2I* iUv = (Vec2I*)&vertex.uv;
+    Vec3I* iNor = (Vec3I*)&vertex.normal;
+    Vec2I* iUv = (Vec2I*)&vertex.uv;
 
     size_t posHash = 0, normHash = 0, uvHash = 0;
 
@@ -30,12 +30,12 @@ template<> struct hash<Quartz::Vertex>
     posHash ^= HashInt(iPos->y);
     posHash ^= HashInt(iPos->z);
 
-    //normHash ^= HashInt(iNor->x);
-    //normHash ^= HashInt(iNor->y);
-    //normHash ^= HashInt(iNor->z);
+    normHash ^= HashInt(iNor->x);
+    normHash ^= HashInt(iNor->y);
+    normHash ^= HashInt(iNor->z);
 
-    //uvHash ^= HashInt(iUv->x);
-    //uvHash ^= HashInt(iUv->y);
+    uvHash ^= HashInt(iUv->x);
+    uvHash ^= HashInt(iUv->y);
 
     return posHash ^ normHash ^ uvHash;
   }
@@ -92,16 +92,16 @@ QuartzResult Mesh::Init(const char* path)
         attrib.vertices[3 * indexSet.vertex_index + 2]
       };
 
-      //vert.uv = Vec2{
-      //  attrib.texcoords[2 * indexSet.texcoord_index + 0],
-      //  1.0f - attrib.texcoords[2 * indexSet.texcoord_index + 1],
-      //};
+      vert.uv = Vec2{
+        attrib.texcoords[2 * indexSet.texcoord_index + 0],
+        1.0f - attrib.texcoords[2 * indexSet.texcoord_index + 1],
+      };
 
-      //vert.normal = Vec3{
-      //  attrib.normals[3 * indexSet.normal_index + 0],
-      //  attrib.normals[3 * indexSet.normal_index + 1],
-      //  attrib.normals[3 * indexSet.normal_index + 2]
-      //};
+      vert.normal = Vec3{
+        attrib.normals[3 * indexSet.normal_index + 0],
+        attrib.normals[3 * indexSet.normal_index + 1],
+        attrib.normals[3 * indexSet.normal_index + 2]
+      };
 
       if (vertMap.count(vert) == 0)
       {
