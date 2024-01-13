@@ -228,6 +228,11 @@ Texture CreateTexture(const char* path)
   return renderer.CreateTexture(path);
 }
 
+Buffer CreateBuffer(uint32_t size)
+{
+  return renderer.CreateBuffer(size);
+}
+
 // ============================================================
 // Layers
 // ============================================================

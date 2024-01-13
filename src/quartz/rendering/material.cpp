@@ -43,6 +43,11 @@ QuartzResult Material::InitInputs(const std::vector<MaterialInput>& inputs)
       values[i].image = inputs[i].texture.m_opalImage;
       infos[i].type = Opal_Input_Type_Samped_Image;
     } break;
+    case Input_Buffer:
+    {
+      values[i].buffer = inputs[i].buffer.m_opalBuffer;
+      infos[i].type = Opal_Input_Type_Uniform_Buffer;
+    } break;
     default: return Quartz_Failure;
     }
   }

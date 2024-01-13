@@ -3,6 +3,7 @@
 #include "quartz/defines.h"
 #include "quartz/rendering/defines.h"
 #include "quartz/rendering/texture.h"
+#include "quartz/rendering/buffer.h"
 
 #include <vector>
 
@@ -21,6 +22,7 @@ struct MaterialInput
   union
   {
     Texture texture;
+    Buffer buffer;
   };
 };
 

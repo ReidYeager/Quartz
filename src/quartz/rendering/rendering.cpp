@@ -323,6 +323,7 @@ QuartzResult Renderer::Resize(uint32_t width, uint32_t height)
   }
   QTZ_ATTEMPT_OPAL(OpalImageResize(m_depthImage, m_window->extents));
   QTZ_ATTEMPT_OPAL(OpalFramebufferReinit(m_framebuffer));
+  QTZ_ATTEMPT_OPAL(OpalFramebufferReinit(m_imguiFramebuffer));
 
   return Quartz_Success;
 }
@@ -371,6 +372,17 @@ Texture Renderer::CreateTexture(const char* path)
     // TODO : Proper error handling
   }
   return newTexture;
+}
+
+Buffer Renderer::CreateBuffer(uint32_t size)
+{
+  Buffer newBuffer;
+  if (newBuffer.Init(size) != Quartz_Success)
+  {
+    QTZ_ATTEMPT_FAIL_LOG("Failed to create buffer");
+    // TODO : Proper error handling
+  }
+  return newBuffer;
 }
 
 } // namespace Quartz

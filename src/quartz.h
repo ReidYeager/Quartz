@@ -8,6 +8,7 @@
 #include "quartz/rendering/material.h"
 #include "quartz/rendering/mesh.h"
 #include "quartz/rendering/texture.h"
+#include "quartz/rendering/buffer.h"
 #include "quartz/rendering/rendering.h"
 #include "quartz/layers/layer.h"
 #include "quartz/platform/input/input.h"
@@ -48,6 +49,7 @@ Material CreateMaterial(const std::vector<const char*>& shaderPaths, const std::
 Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
 Mesh CreateMesh(const char* path);
 Texture CreateTexture(const char* path);
+Buffer CreateBuffer(uint32_t size);
 
 // ============================================================
 // Layers

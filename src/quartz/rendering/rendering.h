@@ -8,6 +8,7 @@
 #include "quartz/rendering/material.h"
 #include "quartz/rendering/mesh.h"
 #include "quartz/rendering/texture.h"
+#include "quartz/rendering/buffer.h"
 
 #include <peridot.h>
 
@@ -53,6 +54,7 @@ public:
   Mesh CreateMesh(const char* path);
   Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
   Texture CreateTexture(const char* path);
+  Buffer CreateBuffer(uint32_t size);
 
 private:
   Window* m_qWindow;
