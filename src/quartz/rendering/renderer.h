@@ -15,9 +15,60 @@
 namespace Quartz
 {
 
+struct LightDirectional
+{
+  Vec3 color;
+  Vec3 direction;
+};
+
+struct LightPoint
+{
+  Vec3 color;
+  Vec3 position;
+
+  float linear;
+  float quadratic;
+};
+
+struct LightSpot
+{
+  Vec3 color;
+  Vec3 position;
+  Vec3 direction;
+  float cutoff;
+};
+
 struct ScenePacket
 {
-  Mat4 cameraViewProjectionMatrix;
+  Mat4 viewProjectionMatrix;
+  Vec3 camPos;
+  Vec3 camForward;
+  Vec3 ambientColor;
+  float specPower;
+  LightDirectional lightDir;
+  LightPoint lightPoint;
+  LightSpot lightSpot;
+};
+
+static const std::vector<OpalBufferElement> packetElements = {
+  Opal_Buffer_Mat4,   /*ViewProj*/
+  Opal_Buffer_Float3, /*CamPos*/
+  Opal_Buffer_Float3, /*CamFwd*/
+  Opal_Buffer_Float3, /*Ambient color*/
+  Opal_Buffer_Float,  /*Spec power*/
+
+  Opal_Buffer_Float3, /*Directional - color*/
+  Opal_Buffer_Float3, /*Directional - direction*/
+
+  Opal_Buffer_Float3, /*Point - color*/
+  Opal_Buffer_Float3, /*Point - position*/
+  Opal_Buffer_Float,  /*Point - linear*/
+  Opal_Buffer_Float,  /*Point - quadratic*/
+
+  Opal_Buffer_Float3, /*Spot - color*/
+  Opal_Buffer_Float3, /*Spot - position*/
+  Opal_Buffer_Float3, /*Spot - direction*/
+  Opal_Buffer_Float   /*Spot - cutoff*/
 };
 
 struct Renderable

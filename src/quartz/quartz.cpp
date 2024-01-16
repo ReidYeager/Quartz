@@ -4,7 +4,7 @@
 
 #include "quartz/events/event.h"
 #include "quartz/platform/platform.h"
-#include "quartz/rendering/rendering.h"
+#include "quartz/rendering/renderer.h"
 #include "quartz/layers/layer.h"
 #include "quartz/layers/layer_stack.h"
 
@@ -87,6 +87,21 @@ void Run()
   time.totalTimeDeltaSum = 0.0;
 
   ScenePacket scenePacket = {};
+  scenePacket.ambientColor = Vec3{ 0.0f, 0.0f, 0.0f };
+  scenePacket.specPower = 32;
+  // Directional
+  scenePacket.lightDir.color = Vec3{ 0.0f, 0.0f, 0.0f };
+  scenePacket.lightDir.direction  = Vec3{ 0.0f, -1.0f, 0.0f };
+  // Point
+  scenePacket.lightPoint.color = Vec3{ 1.0f, 1.0f, 1.0f };
+  scenePacket.lightPoint.position = Vec3{ 0.0f, 1.25f, 1.3f };
+  scenePacket.lightPoint.linear = 0.09f;
+  scenePacket.lightPoint.quadratic = 0.032f;
+  // Spot
+  scenePacket.lightSpot.color = Vec3{ 1.0f, 1.0f, 1.0f };
+  scenePacket.lightSpot.position = Vec3{ 0.0f, 0.0f, 0.0f };
+  scenePacket.lightSpot.direction = Vec3{ 0.0f, -1.0f, 0.0f };
+  scenePacket.lightSpot.cutoff = cos(PERI_DEGREES_TO_RADIANS(45.0f));
 
   while (!window->ShouldClose())
   {
@@ -120,7 +135,8 @@ void Run()
     {
       Transform* camTransform = (Transform*)camerasIter.GetComponent(transformComponentId);
       Camera* cam = (Camera*)camerasIter.GetComponent(cameraComponentId);
-      scenePacket.cameraViewProjectionMatrix = Mat4MuliplyMat4(cam->projectionMatrix, Mat4Invert(TransformToMat4(*camTransform)));
+      scenePacket.viewProjectionMatrix = Mat4MuliplyMat4(cam->projectionMatrix, Mat4Invert(TransformToMat4(*camTransform)));
+      scenePacket.camPos = camTransform->position;
       renderer.PushSceneData(&scenePacket);
 
       while (!renderableIter.AtEnd())
@@ -149,6 +165,40 @@ void Run()
       ImGui_ImplVulkan_NewFrame();
       ImGui_ImplWin32_NewFrame();
       ImGui::NewFrame();
+
+      // Light testing
+      {
+        ImGui::Begin("Lights");
+
+        ImGui::PushID("Scene");
+        ImGui::DragFloat3("Ambient", (float*)&scenePacket.ambientColor, 0.01f);
+        ImGui::DragFloat("SpecPower", (float*)&scenePacket.specPower, 0.01f);
+        ImGui::PopID();
+
+        ImGui::SeparatorText("Directional");
+        ImGui::PushID("Dir");
+        ImGui::DragFloat3("Color", (float*)&scenePacket.lightDir.color, 0.01f);
+        ImGui::DragFloat3("Direction", (float*)&scenePacket.lightDir.direction, 0.01f);
+        ImGui::PopID();
+
+        ImGui::SeparatorText("Point");
+        ImGui::PushID("Point");
+        ImGui::DragFloat3("Color", (float*)&scenePacket.lightPoint.color, 0.01f);
+        ImGui::DragFloat3("Position", (float*)&scenePacket.lightPoint.position, 0.01f);
+        ImGui::DragFloat("Linear", (float*)&scenePacket.lightPoint.linear, 0.01f);
+        ImGui::DragFloat("Quadratic", (float*)&scenePacket.lightPoint.quadratic, 0.01f);
+        ImGui::PopID();
+
+        ImGui::SeparatorText("Spot");
+        ImGui::PushID("Spot");
+        ImGui::DragFloat3("Color", (float*)&scenePacket.lightSpot.color, 0.01f);
+        ImGui::DragFloat3("Position", (float*)&scenePacket.lightSpot.position, 0.01f);
+        ImGui::DragFloat3("Direction", (float*)&scenePacket.lightSpot.direction, 0.01f);
+        ImGui::DragFloat("Cutoff", (float*)&scenePacket.lightSpot.cutoff, 0.01f);
+        ImGui::PopID();
+
+        ImGui::End();
+      }
 
       for (auto iterator = layerStack.BeginIterator(); iterator != layerStack.EndIterator(); )
       {

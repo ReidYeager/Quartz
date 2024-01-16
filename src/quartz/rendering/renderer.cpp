@@ -1,7 +1,7 @@
 
 #include "quartz/defines.h"
 #include "quartz/rendering/defines.h"
-#include "quartz/rendering/rendering.h"
+#include "quartz/rendering/renderer.h"
 #include "quartz/platform/platform.h"
 #include "quartz/platform/filesystem/filesystem.h"
 
@@ -114,11 +114,12 @@ QuartzResult Renderer::Init(Window* window)
   // Scene input set
   // ==============================
 
-  OpalBufferInitInfo sceneBufferInfo = {};
-  sceneBufferInfo.size = sizeof(ScenePacket);
+  OpalBufferInitAlignedInfo sceneBufferInfo = {};
   sceneBufferInfo.usage = Opal_Buffer_Usage_Uniform;
+  sceneBufferInfo.elementCount = packetElements.size();
+  sceneBufferInfo.pElements = packetElements.data();
 
-  QTZ_ATTEMPT_OPAL(OpalBufferInit(&m_sceneBuffer, sceneBufferInfo));
+  QTZ_ATTEMPT_OPAL(OpalBufferInitAligned(&m_sceneBuffer, sceneBufferInfo));
 
   OpalInputAccessInfo sceneInputs[1] = {
     { Opal_Input_Type_Uniform_Buffer, Opal_Stage_All_Graphics }
@@ -307,7 +308,7 @@ void Renderer::Shutdown()
 
 QuartzResult Renderer::PushSceneData(ScenePacket* sceneInfo)
 {
-  QTZ_ATTEMPT_OPAL(OpalBufferPushData(m_sceneBuffer, (void*)sceneInfo));
+  QTZ_ATTEMPT_OPAL(OpalBufferAlignAndPushData(m_sceneBuffer, packetElements.size(), packetElements.data(), (void*)sceneInfo));
   return Quartz_Success;
 }
 

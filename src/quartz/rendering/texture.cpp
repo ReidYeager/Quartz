@@ -2,7 +2,7 @@
 #include "quartz/defines.h"
 #include "quartz/rendering/material.h"
 #include "quartz/platform/filesystem/filesystem.h"
-#include "quartz/rendering/rendering.h"
+#include "quartz/rendering/renderer.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>

@@ -9,7 +9,7 @@
 #include "quartz/rendering/mesh.h"
 #include "quartz/rendering/texture.h"
 #include "quartz/rendering/buffer.h"
-#include "quartz/rendering/rendering.h"
+#include "quartz/rendering/renderer.h"
 #include "quartz/layers/layer.h"
 #include "quartz/platform/input/input.h"
 
