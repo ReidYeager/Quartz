@@ -31,6 +31,9 @@ std::vector<Diamond::Entity> entities;
 ComponentId cameraComponentId;
 ComponentId renderableComponentId;
 ComponentId transformComponentId;
+ComponentId lightDirectionalComponentId;
+ComponentId lightPointComponentId;
+ComponentId lightSpotComponentId;
 
 void PlatformInputCallback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -73,6 +76,9 @@ void Run()
   transformComponentId = QuartzDefineComponent(Transform);
   renderableComponentId = QuartzDefineComponent(Renderable);
   cameraComponentId = QuartzDefineComponent(Camera);
+  lightDirectionalComponentId = QuartzDefineComponent(LightDirectional);
+  lightPointComponentId = QuartzDefineComponent(LightPoint);
+  lightSpotComponentId = QuartzDefineComponent(LightSpot);
 
   PushLayer(GetGameLayer());
 
@@ -88,20 +94,6 @@ void Run()
 
   ScenePacket scenePacket = {};
   scenePacket.ambientColor = Vec3{ 0.0f, 0.0f, 0.0f };
-  scenePacket.specPower = 32;
-  // Directional
-  scenePacket.lightDir.color = Vec3{ 0.0f, 0.0f, 0.0f };
-  scenePacket.lightDir.direction  = Vec3{ 0.0f, -1.0f, 0.0f };
-  // Point
-  scenePacket.lightPoint.color = Vec3{ 1.0f, 1.0f, 1.0f };
-  scenePacket.lightPoint.position = Vec3{ 0.0f, 1.25f, 1.3f };
-  scenePacket.lightPoint.linear = 0.09f;
-  scenePacket.lightPoint.quadratic = 0.032f;
-  // Spot
-  scenePacket.lightSpot.color = Vec3{ 1.0f, 1.0f, 1.0f };
-  scenePacket.lightSpot.position = Vec3{ 0.0f, 0.0f, 0.0f };
-  scenePacket.lightSpot.direction = Vec3{ 0.0f, -1.0f, 0.0f };
-  scenePacket.lightSpot.cutoff = cos(PERI_DEGREES_TO_RADIANS(45.0f));
 
   while (!window->ShouldClose())
   {
@@ -129,6 +121,28 @@ void Run()
     {
       renderer.StartFrame();
       renderer.StartSceneRender();
+
+      // Rough light preparation
+      Diamond::EcsIterator iterLightDir(&globalEcsWorld, { lightDirectionalComponentId });
+      Diamond::EcsIterator iterLightPoint(&globalEcsWorld, { lightPointComponentId });
+      Diamond::EcsIterator iterLightSpot(&globalEcsWorld, { lightSpotComponentId });
+
+      if (!iterLightDir.AtEnd())
+      {
+        scenePacket.lights.directional = *(LightDirectional*)iterLightDir.GetComponent(lightDirectionalComponentId);
+      }
+
+      for (uint32_t i = 0; i < QTZ_LIGHT_POINT_MAX_COUNT && !iterLightPoint.AtEnd(); i++)
+      {
+        scenePacket.lights.pPoints[i] = *(LightPoint*)iterLightPoint.GetComponent(lightPointComponentId);
+        iterLightPoint.StepNextElement();
+      }
+
+      for (uint32_t i = 0; i < QTZ_LIGHT_SPOT_MAX_COUNT && !iterLightSpot.AtEnd(); i++)
+      {
+        scenePacket.lights.pSpots[i] = *(LightSpot*)iterLightSpot.GetComponent(lightSpotComponentId);
+        iterLightSpot.StepNextElement();
+      }
     }
 
     while (!camerasIter.AtEnd())
@@ -166,36 +180,11 @@ void Run()
       ImGui_ImplWin32_NewFrame();
       ImGui::NewFrame();
 
-      // Light testing
+      // Scene
       {
-        ImGui::Begin("Lights");
+        ImGui::Begin("Scene");
 
-        ImGui::PushID("Scene");
-        ImGui::DragFloat3("Ambient", (float*)&scenePacket.ambientColor, 0.01f);
-        ImGui::DragFloat("SpecPower", (float*)&scenePacket.specPower, 0.01f);
-        ImGui::PopID();
-
-        ImGui::SeparatorText("Directional");
-        ImGui::PushID("Dir");
-        ImGui::DragFloat3("Color", (float*)&scenePacket.lightDir.color, 0.01f);
-        ImGui::DragFloat3("Direction", (float*)&scenePacket.lightDir.direction, 0.01f);
-        ImGui::PopID();
-
-        ImGui::SeparatorText("Point");
-        ImGui::PushID("Point");
-        ImGui::DragFloat3("Color", (float*)&scenePacket.lightPoint.color, 0.01f);
-        ImGui::DragFloat3("Position", (float*)&scenePacket.lightPoint.position, 0.01f);
-        ImGui::DragFloat("Linear", (float*)&scenePacket.lightPoint.linear, 0.01f);
-        ImGui::DragFloat("Quadratic", (float*)&scenePacket.lightPoint.quadratic, 0.01f);
-        ImGui::PopID();
-
-        ImGui::SeparatorText("Spot");
-        ImGui::PushID("Spot");
-        ImGui::DragFloat3("Color", (float*)&scenePacket.lightSpot.color, 0.01f);
-        ImGui::DragFloat3("Position", (float*)&scenePacket.lightSpot.position, 0.01f);
-        ImGui::DragFloat3("Direction", (float*)&scenePacket.lightSpot.direction, 0.01f);
-        ImGui::DragFloat("Cutoff", (float*)&scenePacket.lightSpot.cutoff, 0.01f);
-        ImGui::PopID();
+        ImGui::DragFloat3("Ambient color", (float*)&scenePacket.ambientColor, 0.01f);
 
         ImGui::End();
       }

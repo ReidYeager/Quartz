@@ -21,6 +21,8 @@ struct LightDirectional
   Vec3 direction;
 };
 
+#define QTZ_LIGHT_DIRECTIONAL_MAX_COUNT 1
+
 struct LightPoint
 {
   Vec3 color;
@@ -30,13 +32,22 @@ struct LightPoint
   float quadratic;
 };
 
+#define QTZ_LIGHT_POINT_MAX_COUNT 4
+
 struct LightSpot
 {
   Vec3 color;
   Vec3 position;
   Vec3 direction;
-  float cutoff;
+
+  float inner;
+  float outer;
+
+  float linear;
+  float quadratic;
 };
+
+#define QTZ_LIGHT_SPOT_MAX_COUNT 2
 
 struct ScenePacket
 {
@@ -44,10 +55,13 @@ struct ScenePacket
   Vec3 camPos;
   Vec3 camForward;
   Vec3 ambientColor;
-  float specPower;
-  LightDirectional lightDir;
-  LightPoint lightPoint;
-  LightSpot lightSpot;
+
+  struct
+  {
+    LightDirectional directional; //[QTZ_LIGHT_DIRECTIONAL_MAX_COUNT];
+    LightPoint pPoints[QTZ_LIGHT_POINT_MAX_COUNT];
+    LightSpot pSpots[QTZ_LIGHT_SPOT_MAX_COUNT];
+  } lights;
 };
 
 static const std::vector<OpalBufferElement> packetElements = {
@@ -55,7 +69,6 @@ static const std::vector<OpalBufferElement> packetElements = {
   Opal_Buffer_Float3, /*CamPos*/
   Opal_Buffer_Float3, /*CamFwd*/
   Opal_Buffer_Float3, /*Ambient color*/
-  Opal_Buffer_Float,  /*Spec power*/
 
   Opal_Buffer_Float3, /*Directional - color*/
   Opal_Buffer_Float3, /*Directional - direction*/
@@ -65,10 +78,36 @@ static const std::vector<OpalBufferElement> packetElements = {
   Opal_Buffer_Float,  /*Point - linear*/
   Opal_Buffer_Float,  /*Point - quadratic*/
 
+  Opal_Buffer_Float3, /*Point - color*/
+  Opal_Buffer_Float3, /*Point - position*/
+  Opal_Buffer_Float,  /*Point - linear*/
+  Opal_Buffer_Float,  /*Point - quadratic*/
+
+  Opal_Buffer_Float3, /*Point - color*/
+  Opal_Buffer_Float3, /*Point - position*/
+  Opal_Buffer_Float,  /*Point - linear*/
+  Opal_Buffer_Float,  /*Point - quadratic*/
+
+  Opal_Buffer_Float3, /*Point - color*/
+  Opal_Buffer_Float3, /*Point - position*/
+  Opal_Buffer_Float,  /*Point - linear*/
+  Opal_Buffer_Float,  /*Point - quadratic*/
+
   Opal_Buffer_Float3, /*Spot - color*/
   Opal_Buffer_Float3, /*Spot - position*/
   Opal_Buffer_Float3, /*Spot - direction*/
-  Opal_Buffer_Float   /*Spot - cutoff*/
+  Opal_Buffer_Float,  /*Spot - inner*/
+  Opal_Buffer_Float,  /*Spot - outer*/
+  Opal_Buffer_Float,  /*Spot - linear*/
+  Opal_Buffer_Float,  /*Spot - quadratic*/
+
+  Opal_Buffer_Float3, /*Spot - color*/
+  Opal_Buffer_Float3, /*Spot - position*/
+  Opal_Buffer_Float3, /*Spot - direction*/
+  Opal_Buffer_Float,  /*Spot - inner*/
+  Opal_Buffer_Float,  /*Spot - outer*/
+  Opal_Buffer_Float,  /*Spot - linear*/
+  Opal_Buffer_Float,  /*Spot - quadratic*/
 };
 
 struct Renderable
