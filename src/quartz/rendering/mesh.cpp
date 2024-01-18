@@ -120,27 +120,46 @@ QuartzResult Mesh::Init(const char* path)
     }
   }
 
+  std::vector<uint32_t> vertexTangentCounts(verticies.size());
   for (uint32_t i = 0; i < indices.size(); i += 3)
   {
-    Vertex* v0 = &verticies[indices[i + 0]];
-    Vertex* v1 = &verticies[indices[i + 1]];
-    Vertex* v2 = &verticies[indices[i + 2]];
+    Vertex* vert1 = &verticies[indices[i + 0]];
+    Vertex* vert2 = &verticies[indices[i + 1]];
+    Vertex* vert3 = &verticies[indices[i + 2]];
 
-    Vec3 e1 = Vec3SubtractVec3(v1->position, v0->position);
-    Vec3 e2 = Vec3SubtractVec3(v2->position, v0->position);
-    Vec2 u1 = Vec2SubtractVec2(v1->uv, v0->uv);
-    Vec2 u2 = Vec2SubtractVec2(v2->uv, v0->uv);
+    Vec3 e1 = Vec3SubtractVec3(vert2->position, vert1->position);
+    Vec3 e2 = Vec3SubtractVec3(vert3->position, vert1->position);
 
-    float f = u1.x * u2.y - u2.x * u1.y;
-    f = 1.0f / f;
+    Vec2 uv1 = Vec2SubtractVec2(vert2->uv, vert1->uv);
+    Vec2 uv2 = Vec2SubtractVec2(vert3->uv, vert1->uv);
 
-    Vec3 tangent;
-    tangent.x = f * ( u2.y * e1.x - u1.y * e2.x);
-    tangent.y = f * ( u2.y * e1.y - u1.y * e2.y);
-    tangent.z = f * ( u2.y * e1.z - u1.y * e2.z);
-    tangent = Vec3Normalize(tangent);
+    float r = 1.0f / (uv1.x * uv2.y - uv2.x * uv1.y);
 
-    v0->tangent = v1->tangent = v2->tangent = tangent;
+    Vec3 tangent = Vec3{ (uv2.y * e1.x - uv1.y * e2.x) * r, (uv2.y * e1.y - uv1.y * e2.y) * r, (uv2.y * e1.z - uv1.y * e2.z) * r };
+
+    if (tangent.x != tangent.x || tangent.y != tangent.y || tangent.z != tangent.z)
+    {
+      // Fix divide by zero issues (If all UV's share an axis)
+      tangent = Vec3{0.0f, 0.0f, 0.0f};
+    }
+
+    vert1->tangent = Vec3AddVec3(vert1->tangent, tangent);
+    vert2->tangent = Vec3AddVec3(vert2->tangent, tangent);
+    vert3->tangent = Vec3AddVec3(vert3->tangent, tangent);
+  }
+
+  for (uint32_t i = 0; i < verticies.size(); i++)
+  {
+    Vertex* v = &verticies[i];
+
+    if (Vec3Compare(v->tangent, Vec3{ 0.0f, 0.0f, 0.0f }))
+    {
+      // TODO : Find a proper fix for invalid tangents
+      v->tangent = v->normal;
+    }
+
+    // Calculate orthogonal tangent
+    v->tangent = Vec3Normalize(Vec3SubtractVec3(v->tangent, Vec3MultiplyFloat(v->normal, Vec3Dot(v->normal, v->tangent))));
   }
 
   Init(verticies, indices);
