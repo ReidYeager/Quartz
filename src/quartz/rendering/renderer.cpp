@@ -21,11 +21,12 @@ QuartzResult Renderer::Init(Window* window)
 {
   m_qWindow = window;
 
-  const uint32_t vertexFormatCount = 3;
+  const uint32_t vertexFormatCount = 4;
   OpalFormat vertexFormats[vertexFormatCount] = {
     Opal_Format_RGB32, // Position
     Opal_Format_RG32, // Uv
     Opal_Format_RGB32, // Normal
+    Opal_Format_RGB32, // Tangent
   };
 
   OpalInitInfo opalInfo;
