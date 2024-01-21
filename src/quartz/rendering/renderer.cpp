@@ -330,7 +330,7 @@ QuartzResult Renderer::Resize(uint32_t width, uint32_t height)
   return Quartz_Success;
 }
 
-Material Renderer::CreateMaterial(const std::vector<const char*>& shaderPaths, const std::vector<MaterialInput>& inputs)
+Material Renderer::CreateMaterial(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs)
 {
   Material newMaterial;
   if (newMaterial.Init(m_renderpass, shaderPaths, inputs))

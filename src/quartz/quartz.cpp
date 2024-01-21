@@ -247,7 +247,7 @@ uint32_t WindowGetHeight()
 // Rendering
 // ============================================================
 
-Material CreateMaterial(const std::vector<const char*>& shaderPaths, const std::vector<MaterialInput>& inputs)
+Material CreateMaterial(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs)
 {
   return renderer.CreateMaterial(shaderPaths, inputs);
 }

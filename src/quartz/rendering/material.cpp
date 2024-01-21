@@ -6,24 +6,22 @@
 
 namespace Quartz
 {
-QuartzResult Material::Init(OpalRenderpass renderpass, const std::vector<const char*>& shaderPaths, const std::vector<MaterialInput>& inputs)
+QuartzResult Material::Init(OpalRenderpass renderpass, const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs)
 {
-  QTZ_ATTEMPT(InitBuffer());
   QTZ_ATTEMPT(InitInputs(inputs));
   QTZ_ATTEMPT(InitShaders(shaderPaths));
   QTZ_ATTEMPT(InitMaterial(renderpass));
 
+  m_shaderPaths.resize(shaderPaths.size());
+  for (uint32_t i = 0; i < shaderPaths.size(); i++)
+  {
+    m_shaderPaths[i] = std::string(shaderPaths[i]);
+  }
+
+  m_renderpass = renderpass;
+  m_inputs = std::vector<MaterialInput>(inputs);
+
   m_valid = true;
-  return Quartz_Success;
-}
-
-QuartzResult Material::InitBuffer()
-{
-  OpalBufferInitInfo bufferInfo;
-  bufferInfo.size = sizeof(Mat4);
-  bufferInfo.usage = Opal_Buffer_Usage_Uniform;
-
-  QTZ_ATTEMPT_OPAL(OpalBufferInit(&m_buffer, bufferInfo));
   return Quartz_Success;
 }
 
@@ -66,19 +64,31 @@ QuartzResult Material::InitInputs(const std::vector<MaterialInput>& inputs)
   return Quartz_Success;
 }
 
-QuartzResult Material::InitShaders(const std::vector<const char*>& shaderPaths)
+QuartzResult Material::InitShaders(const std::vector<std::string>& shaderPaths)
 {
   char* fileBuffer;
 
+  if (m_shaders.size())
+  {
+    for (uint32_t i = 0; i < m_shaders.size(); i++)
+    {
+      OpalShaderShutdown(&m_shaders[i]);
+    }
+  }
+  else
+  {
+    m_shaders.resize(2);
+  }
+
   OpalShaderInitInfo shaderInfo[2];
   shaderInfo[0].type = Opal_Shader_Vertex;
-  shaderInfo[0].size = PlatformLoadFile((void**)&fileBuffer, shaderPaths[0]);
+  shaderInfo[0].size = PlatformLoadFile((void**)&fileBuffer, shaderPaths[0].c_str());
   shaderInfo[0].pSource = fileBuffer;
   QTZ_ATTEMPT_OPAL(OpalShaderInit(&m_shaders[0], shaderInfo[0]));
   free(fileBuffer);
 
   shaderInfo[1].type = Opal_Shader_Fragment;
-  shaderInfo[1].size = PlatformLoadFile((void**)&fileBuffer, shaderPaths[1]);
+  shaderInfo[1].size = PlatformLoadFile((void**)&fileBuffer, shaderPaths[1].c_str());
   shaderInfo[1].pSource = fileBuffer;
   QTZ_ATTEMPT_OPAL(OpalShaderInit(&m_shaders[1], shaderInfo[1]));
   free(fileBuffer);
@@ -99,22 +109,16 @@ QuartzResult Material::InitMaterial(OpalRenderpass renderpass)
   materialInfo.subpassIndex = 0;
   materialInfo.inputLayoutCount = layoutCount;
   materialInfo.pInputLayouts = layouts;
-  materialInfo.shaderCount = 2;
-  materialInfo.pShaders = m_shaders;
+  materialInfo.shaderCount = m_shaders.size();
+  materialInfo.pShaders = m_shaders.data();
   materialInfo.pushConstantSize = sizeof(Mat4);
 
   QTZ_ATTEMPT_OPAL(OpalMaterialInit(&m_material, materialInfo));
 
-  OpalShaderShutdown(&m_shaders[0]);
-  OpalShaderShutdown(&m_shaders[1]);
-  OpalInputLayoutShutdown(&m_layout);
+  //OpalShaderShutdown(&m_shaders[0]);
+  //OpalShaderShutdown(&m_shaders[1]);
+  //OpalInputLayoutShutdown(&m_layout);
 
-  return Quartz_Success;
-}
-
-QuartzResult Material::PushData(void* data)
-{
-  QTZ_ATTEMPT_OPAL(OpalBufferPushData(m_buffer, data));
   return Quartz_Success;
 }
 
@@ -130,9 +134,15 @@ void Material::Shutdown()
 {
   OpalMaterialShutdown(&m_material);
   OpalInputSetShutdown(&m_set);
-  OpalBufferShutdown(&m_buffer);
 
   m_valid = false;
+}
+
+void Material::Reload()
+{
+  OpalWaitIdle();
+  Shutdown();
+  Init(m_renderpass, m_shaderPaths, m_inputs);
 }
 
 

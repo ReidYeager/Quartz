@@ -32,20 +32,23 @@ friend class Renderer;
 
 public:
   void Shutdown();
-  QuartzResult PushData(void* data);
+  void Reload();
 
 private:
   bool m_valid = false;
+  OpalRenderpass m_renderpass;
   OpalInputLayout m_layout;
   OpalBuffer m_buffer;
   OpalInputSet m_set;
-  OpalShader m_shaders[2] = {};
+  std::vector<OpalShader> m_shaders;
+  std::vector<MaterialInput> m_inputs;
   OpalMaterial m_material;
 
-  QuartzResult Init(OpalRenderpass renderpass, const std::vector<const char*>& shaderPaths, const std::vector<MaterialInput>& inputs);
-  QuartzResult InitBuffer();
+  std::vector<std::string> m_shaderPaths;
+
+  QuartzResult Init(OpalRenderpass renderpass, const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs);
   QuartzResult InitInputs(const std::vector<MaterialInput>& inputs);
-  QuartzResult InitShaders(const std::vector<const char*>& shaderPaths);
+  QuartzResult InitShaders(const std::vector<std::string>& shaderPaths);
   QuartzResult InitMaterial(OpalRenderpass renderpass);
 
   QuartzResult Bind() const;

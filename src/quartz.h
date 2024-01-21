@@ -45,7 +45,7 @@ struct Camera
   Mat4 projectionMatrix;
 };
 
-Material CreateMaterial(const std::vector<const char*>& shaderPaths, const std::vector<MaterialInput>& inputs);
+Material CreateMaterial(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs);
 Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
 Mesh CreateMesh(const char* path);
 Texture CreateTexture(const char* path);
