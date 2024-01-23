@@ -4,6 +4,7 @@
 #include "quartz/core/application.h"
 #include "quartz/logging/logger.h"
 #include "quartz/platform/input/input.h"
+#include "quartz/core/ecs.h"
 
 #include <imgui.h> // For use in Application::RenderImgui()
 
@@ -16,6 +17,9 @@ void RequestQuit();
 double DeltaTime();
 
 } // namespace Quartz
+
+// Entry point
+// ============================================================
 
 extern Quartz::Application* GetClientApplication();
 

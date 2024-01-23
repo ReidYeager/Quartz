@@ -32,6 +32,7 @@ QuartzResult InitWindow();
 // Rendering
 QuartzResult InitRenderer();
 // Engine
+QuartzResult InitEcs();
 void InitClocks();
 QuartzResult InitLayers();
 
@@ -45,8 +46,8 @@ QuartzResult CoreInit()
   QTZ_ATTEMPT(InitWindow());
   QTZ_ATTEMPT(InitRenderer());
   // init resource pools
-  // init ecs
 
+  QTZ_ATTEMPT(InitEcs());
   InitClocks();
   QTZ_ATTEMPT(InitLayers());
 
@@ -87,6 +88,13 @@ QuartzResult InitRenderer()
 
 // Engine
 // ============================================================
+
+QuartzResult InitEcs()
+{
+  QuartzDefineComponent(Transform);
+
+  return Quartz_Success;
+}
 
 void InitClocks()
 {

@@ -3,6 +3,7 @@
 #include "quartz/defines.h"
 
 #include "quartz/core/application.h"
+#include "quartz/core/ecs.h"
 #include "quartz/platform/window/window.h"
 #include "quartz/rendering/renderer.h"
 #include "quartz/layers/layer_stack.h"
@@ -36,6 +37,7 @@ struct CoreState
   Renderer renderer;
   TimeKeepers time;
   LayerStack layerStack;
+  Diamond::EcsWorld ecsWorld;
 
   Application* clientApp;
 };
