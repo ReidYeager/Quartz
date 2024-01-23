@@ -4,7 +4,6 @@
 #include "quartz/platform/input/keys.h"
 
 #include <stdint.h>
-#include <peridot.h>
 
 namespace Quartz
 {

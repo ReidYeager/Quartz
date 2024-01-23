@@ -3,8 +3,6 @@
 #include "quartz/defines.h"
 
 #include <opal.h>
-#define PERIDOT_VULKAN
-#include <peridot.h>
 
 namespace Quartz
 {
@@ -38,6 +36,55 @@ struct Vertex
       && Vec2Compare(uv, other.uv)
       && Vec3Compare(tangent, other.tangent);
   }
+};
+
+struct LightDirectional
+{
+  Vec3 color;
+  Vec3 direction;
+};
+
+#define QTZ_LIGHT_DIRECTIONAL_MAX_COUNT 1
+
+struct LightPoint
+{
+  Vec3 color;
+  Vec3 position;
+
+  float linear;
+  float quadratic;
+};
+
+#define QTZ_LIGHT_POINT_MAX_COUNT 4
+
+struct LightSpot
+{
+  Vec3 color;
+  Vec3 position;
+  Vec3 direction;
+
+  float inner;
+  float outer;
+
+  float linear;
+  float quadratic;
+};
+
+struct Renderable
+{
+  class Mesh* mesh;
+  class Material* material;
+  Mat4 transformMatrix;
+};
+
+struct Camera
+{
+  float fov;
+  float desiredRatio;
+  float nearClip;
+  float farClip;
+  Mat4 projectionMatrix;
+  Mat4 viewProjectionMatrix;
 };
 
 } // namespace Quartz

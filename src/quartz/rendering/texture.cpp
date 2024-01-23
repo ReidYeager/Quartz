@@ -3,6 +3,7 @@
 #include "quartz/rendering/material.h"
 #include "quartz/platform/filesystem/filesystem.h"
 #include "quartz/rendering/renderer.h"
+#include "quartz/core/core.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -10,19 +11,42 @@
 namespace Quartz
 {
 
+Texture::Texture(const char* path)
+{
+  QTZ_ATTEMPT_VOID(Init(path));
+}
+
 void Texture::Shutdown()
 {
+  if (!m_isValid)
+  {
+    return;
+  }
+
+  m_isValid = false;
   OpalImageShutdown(&m_opalImage);
   OpalInputSetShutdown(&m_imguiSet);
 }
 
 void* Texture::ForImgui()
 {
+  if (!m_isValid)
+  {
+    QTZ_ERROR("Attempting to use invalid texture for imgui");
+    return nullptr;
+  }
+
   return (void*)m_imguiSet->vk.descriptorSet;
 }
 
-QuartzResult Texture::Init(const char* path, OpalInputLayout imguiLayout)
+QuartzResult Texture::Init(const char* path)
 {
+  if (m_isValid)
+  {
+    QTZ_WARNING("Attempting to intialize a valid texture");
+    return Quartz_Success;
+  }
+
   int32_t width, height, channels;
   stbi_uc* source = stbi_load(path, &width, &height, &channels, STBI_rgb_alpha);
 
@@ -47,7 +71,7 @@ QuartzResult Texture::Init(const char* path, OpalInputLayout imguiLayout)
   inValue.image = m_opalImage;
 
   OpalInputSetInitInfo setInfo = {};
-  setInfo.layout = imguiLayout;
+  setInfo.layout = g_coreState.renderer.GetSingleImageLayout();
   setInfo.pInputValues = &inValue;
 
   QTZ_ATTEMPT_OPAL(OpalInputSetInit(&m_imguiSet, setInfo));
@@ -59,6 +83,7 @@ QuartzResult Texture::Init(const char* path, OpalInputLayout imguiLayout)
 
   QTZ_ATTEMPT_OPAL(OpalInputSetUpdate(m_imguiSet, 1, &imageInput));
 
+  m_isValid = true;
   return Quartz_Success;
 }
 

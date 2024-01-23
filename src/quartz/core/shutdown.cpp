@@ -12,6 +12,7 @@ void CoreShutdown()
     g_coreState.time.frameIndex);
 
   g_coreState.clientApp->Shutdown();
+  delete g_coreState.clientApp;
 
   for (auto iterator = g_coreState.layerStack.EndIterator(); iterator != g_coreState.layerStack.BeginIterator();)
   {

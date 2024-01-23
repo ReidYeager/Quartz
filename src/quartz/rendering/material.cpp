@@ -1,16 +1,29 @@
 
 #include "quartz/defines.h"
 #include "quartz/rendering/material.h"
-#include "quartz/platform/filesystem/filesystem.h"
 #include "quartz/rendering/renderer.h"
+#include "quartz/platform/filesystem/filesystem.h"
+#include "quartz/core/core.h"
 
 namespace Quartz
 {
-QuartzResult Material::Init(OpalRenderpass renderpass, const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs)
+
+Material::Material(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs)
 {
+  QTZ_ATTEMPT_VOID(Init(shaderPaths, inputs));
+}
+
+QuartzResult Material::Init(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs)
+{
+  if (m_isValid)
+  {
+    QTZ_WARNING("Attempting to initialize a valid material");
+    return Quartz_Success;
+  }
+
   QTZ_ATTEMPT(InitInputs(inputs));
   QTZ_ATTEMPT(InitShaders(shaderPaths));
-  QTZ_ATTEMPT(InitMaterial(renderpass));
+  QTZ_ATTEMPT(InitMaterial());
 
   m_shaderPaths.resize(shaderPaths.size());
   for (uint32_t i = 0; i < shaderPaths.size(); i++)
@@ -18,10 +31,10 @@ QuartzResult Material::Init(OpalRenderpass renderpass, const std::vector<std::st
     m_shaderPaths[i] = std::string(shaderPaths[i]);
   }
 
-  m_renderpass = renderpass;
+  m_renderpass = g_coreState.renderer.GetRenderpass();
   m_inputs = std::vector<MaterialInput>(inputs);
 
-  m_valid = true;
+  m_isValid = true;
   return Quartz_Success;
 }
 
@@ -38,11 +51,23 @@ QuartzResult Material::InitInputs(const std::vector<MaterialInput>& inputs)
     {
     case Input_Texture:
     {
+      if (!inputs[i].texture.IsValid())
+      {
+        QTZ_ERROR("Attempting to use an invalid texture as material input {}", i);
+        return Quartz_Failure;
+      }
+
       values[i].image = inputs[i].texture.m_opalImage;
       infos[i].type = Opal_Input_Type_Samped_Image;
     } break;
     case Input_Buffer:
     {
+      if (!inputs[i].buffer.IsValid())
+      {
+        QTZ_ERROR("Attempting to use an invalid buffer as material input {}", i);
+        return Quartz_Failure;
+      }
+
       values[i].buffer = inputs[i].buffer.m_opalBuffer;
       infos[i].type = Opal_Input_Type_Uniform_Buffer;
     } break;
@@ -96,7 +121,7 @@ QuartzResult Material::InitShaders(const std::vector<std::string>& shaderPaths)
   return Quartz_Success;
 }
 
-QuartzResult Material::InitMaterial(OpalRenderpass renderpass)
+QuartzResult Material::InitMaterial()
 {
   const uint32_t layoutCount = 2;
   OpalInputLayout layouts[layoutCount] = {
@@ -105,7 +130,7 @@ QuartzResult Material::InitMaterial(OpalRenderpass renderpass)
   };
 
   OpalMaterialInitInfo materialInfo;
-  materialInfo.renderpass = renderpass;
+  materialInfo.renderpass = g_coreState.renderer.GetRenderpass();
   materialInfo.subpassIndex = 0;
   materialInfo.inputLayoutCount = layoutCount;
   materialInfo.pInputLayouts = layouts;
@@ -115,34 +140,61 @@ QuartzResult Material::InitMaterial(OpalRenderpass renderpass)
 
   QTZ_ATTEMPT_OPAL(OpalMaterialInit(&m_material, materialInfo));
 
-  //OpalShaderShutdown(&m_shaders[0]);
-  //OpalShaderShutdown(&m_shaders[1]);
-  //OpalInputLayoutShutdown(&m_layout);
-
   return Quartz_Success;
 }
 
 QuartzResult Material::Bind() const
 {
+  if (!m_isValid)
+  {
+    QTZ_ERROR("Attempting to use an invalid material");
+    return Quartz_Failure;
+  }
+
   OpalRenderBindMaterial(m_material);
   OpalRenderBindInputSet(Renderer::SceneSet(), 0);
   OpalRenderBindInputSet(m_set, 1);
   return Quartz_Success;
 }
 
+Material::~Material()
+{
+  if (m_isValid)
+  {
+    QTZ_ERROR("Material must be shut down manually");
+  }
+}
+
 void Material::Shutdown()
 {
+  if (!m_isValid)
+  {
+    return;
+  }
+
   OpalMaterialShutdown(&m_material);
+  OpalInputLayoutShutdown(&m_layout);
   OpalInputSetShutdown(&m_set);
 
-  m_valid = false;
+  for (uint32_t i = 0; i < m_shaders.size(); i++)
+  {
+    OpalShaderShutdown(&m_shaders[i]);
+  }
+
+  m_isValid = false;
 }
 
 void Material::Reload()
 {
+  if (!m_isValid)
+  {
+    QTZ_WARNING("Attempting to reload an invalid material");
+    return;
+  }
+
   OpalWaitIdle();
   Shutdown();
-  Init(m_renderpass, m_shaderPaths, m_inputs);
+  Init(m_shaderPaths, m_inputs);
 }
 
 

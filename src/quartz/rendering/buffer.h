@@ -4,7 +4,6 @@
 #include "quartz/rendering/defines.h"
 
 #include <opal.h>
-#include <peridot.h>
 
 namespace Quartz
 {
@@ -15,13 +14,18 @@ class Buffer
   friend class Material;
 
 public:
-  void Shutdown();
-  QuartzResult PushData(void* data);
-
-private:
-  OpalBuffer m_opalBuffer;
+  Buffer() : m_isValid(false) {}
+  Buffer(uint32_t size);
 
   QuartzResult Init(uint32_t size);
+
+  void Shutdown();
+  QuartzResult PushData(void* data);
+  inline bool IsValid() const { return m_isValid; }
+
+private:
+  bool m_isValid = false;
+  OpalBuffer m_opalBuffer;
 };
 
 } // namespace Quartz

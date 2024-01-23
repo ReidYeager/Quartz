@@ -2,9 +2,13 @@
 
 #include "quartz/defines.h"
 #include "quartz/core/application.h"
+#include "quartz/core/ecs.h"
 #include "quartz/logging/logger.h"
 #include "quartz/platform/input/input.h"
-#include "quartz/core/ecs.h"
+
+#include "quartz/rendering/defines.h"
+#include "quartz/rendering/mesh.h"
+#include "quartz/rendering/material.h"
 
 #include <imgui.h> // For use in Application::RenderImgui()
 
@@ -14,7 +18,10 @@ namespace Quartz {
 void Run();
 // Core
 void RequestQuit();
-double DeltaTime();
+double DeltaTime(); // Previous frame's delta time
+double Time();      // Total real time
+uint32_t WindowWidth();
+uint32_t WindowHeight();
 
 } // namespace Quartz
 

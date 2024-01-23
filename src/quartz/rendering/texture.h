@@ -4,7 +4,6 @@
 #include "quartz/rendering/defines.h"
 
 #include <opal.h>
-#include <peridot.h>
 
 namespace Quartz
 {
@@ -15,16 +14,21 @@ class Texture
   friend class Material;
 
 public:
-  void Shutdown();
-  void* ForImgui();
+  Texture() : m_isValid(false) {}
+  Texture(const char* path);
 
-private:
-  OpalImage m_opalImage;
-  OpalInputSet m_imguiSet;
-
-  QuartzResult Init(const char* path, OpalInputLayout imguiLayout);
+  QuartzResult Init(const char* path);
   //QuartzResult Init(const std::vector<Vec4>& pixels);
   //QuartzResult Init(const std::vector<Vec3>& pixels);
+
+  void Shutdown();
+  void* ForImgui();
+  inline bool IsValid() const { return m_isValid; }
+
+private:
+  bool m_isValid = false;
+  OpalImage m_opalImage;
+  OpalInputSet m_imguiSet;
 };
 
 } // namespace Quartz

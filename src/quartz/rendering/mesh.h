@@ -4,7 +4,6 @@
 #include "quartz/rendering/defines.h"
 
 #include <opal.h>
-#include <peridot.h>
 
 #include <vector>
 
@@ -16,13 +15,21 @@ class Mesh
 friend class Renderer;
 
 public:
-  void Shutdown();
+  Mesh() : m_isValid(false) {}
+  Mesh(const char* path);
+  Mesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
 
-private:
-  OpalMesh m_opalMesh;
+  ~Mesh();
 
   QuartzResult Init(const char* path);
   QuartzResult Init(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
+  void Shutdown();
+
+  inline bool IsValid() const { return m_isValid; }
+
+private:
+  OpalMesh m_opalMesh;
+  bool m_isValid;
 
   void Render() const;
 };

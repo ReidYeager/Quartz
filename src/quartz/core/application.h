@@ -8,6 +8,8 @@ namespace Quartz
 class Application
 {
 public:
+  virtual ~Application() {};
+
   virtual QuartzResult Init()                   = 0;
   virtual QuartzResult Update(double deltaTime) = 0;
   virtual void         Shutdown()               = 0;

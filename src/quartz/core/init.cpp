@@ -91,7 +91,9 @@ QuartzResult InitRenderer()
 
 QuartzResult InitEcs()
 {
-  QuartzDefineComponent(Transform);
+  g_coreState.ecsIds.transform = QuartzDefineComponent(Transform);
+  g_coreState.ecsIds.renderable = QuartzDefineComponent(Renderable);
+  g_coreState.ecsIds.camera = QuartzDefineComponent(Camera);
 
   return Quartz_Success;
 }

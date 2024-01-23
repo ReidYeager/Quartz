@@ -72,6 +72,12 @@ public:
     return (T*)m_iterator->GetComponent(Quartz::__ComponentId(typeid(T).name()));
   }
 
+  template<typename T>
+  bool Has()
+  {
+    return m_iterator->HasComponent(Quartz::__ComponentId(typeid(T).name()));
+  }
+
 private:
   Diamond::EcsIterator* m_iterator;
 };

@@ -29,6 +29,7 @@ QuartzResult UpdateCameraVisibility();
 
 // Rendering
 QuartzResult Render();
+QuartzResult RenderScene();
 QuartzResult RenderImgui();
 
 // Core
@@ -90,6 +91,26 @@ QuartzResult UpdateTransforms()
   // Iterate through all Transform components
   //   Update the transformation matrix associated with transform[i]
 
+  ObjectIterator renderableIter({g_coreState.ecsIds.transform, g_coreState.ecsIds.renderable});
+
+  while (!renderableIter.AtEnd())
+  {
+    Transform* t = renderableIter.Get<Transform>();
+    Renderable* r = renderableIter.Get<Renderable>();
+    r->transformMatrix = TransformToMat4(*t);
+    renderableIter.NextElement();
+  }
+
+  ObjectIterator camerasIter({ g_coreState.ecsIds.transform, g_coreState.ecsIds.camera });
+
+  while (!camerasIter.AtEnd())
+  {
+    Transform* t = camerasIter.Get<Transform>();
+    Camera* c = camerasIter.Get<Camera>();
+    c->viewProjectionMatrix = Mat4MuliplyMat4(c->projectionMatrix, Mat4Invert(TransformToMat4(*t)));
+    camerasIter.NextElement();
+  }
+
   return Quartz_Success;
 }
 
@@ -111,15 +132,38 @@ QuartzResult Render()
     return Quartz_Success;
 
   QTZ_ATTEMPT(g_coreState.renderer.StartFrame());
+
+  QTZ_ATTEMPT(RenderScene());
+  QTZ_ATTEMPT(RenderImgui());
+
+  QTZ_ATTEMPT(g_coreState.renderer.EndFrame());
+
+  return Quartz_Success;
+}
+
+QuartzResult RenderScene()
+{
   g_coreState.renderer.StartSceneRender();
 
   QTZ_ATTEMPT(g_coreState.renderer.PushSceneData(&g_packet));
 
-  // Render all cameras' visible objects
+  ObjectIterator cameraIter({g_coreState.ecsIds.camera});
+  ObjectIterator renderableIter({g_coreState.ecsIds.renderable});
 
-  QTZ_ATTEMPT(RenderImgui());
-  QTZ_ATTEMPT(g_coreState.renderer.EndFrame());
+  while (!cameraIter.AtEnd())
+  {
+    g_packet.viewProjectionMatrix = cameraIter.Get<Camera>()->viewProjectionMatrix;
 
+    while (!renderableIter.AtEnd())
+    {
+      Renderable* r = renderableIter.Get<Renderable>();
+      g_coreState.renderer.Render(r);
+      renderableIter.NextElement();
+    }
+    cameraIter.NextElement();
+  }
+
+  g_coreState.renderer.EndSceneRender();
   return Quartz_Success;
 }
 

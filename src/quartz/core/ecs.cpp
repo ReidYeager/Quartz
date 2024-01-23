@@ -42,7 +42,8 @@ void __RemoveComponent(Diamond::Entity entity, ComponentId id)
 Entity::Entity()
 {
   m_id = g_coreState.ecsWorld.CreateEntity();
-  __AddComponent(m_id, QuartzComponentId(Transform));
+  Transform* t = (Transform*)__AddComponent(m_id, QuartzComponentId(Transform));
+  *t = transformIdentity;
 }
 
 Entity::~Entity()

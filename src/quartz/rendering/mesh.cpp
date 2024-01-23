@@ -50,8 +50,32 @@ template<> struct hash<Quartz::Vertex>
 namespace Quartz
 {
 
+Mesh::Mesh(const char* path) : m_isValid(false)
+{
+  QTZ_ATTEMPT_VOID(Init(path));
+}
+
+Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) : m_isValid(false)
+{
+  QTZ_ATTEMPT_VOID(Init(vertices, indices));
+}
+
+Mesh::~Mesh()
+{
+  if (m_isValid)
+  {
+    QTZ_ERROR("Mesh must be shut down manually");
+  }
+}
+
 QuartzResult Mesh::Init(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
 {
+  if (m_isValid)
+  {
+    QTZ_WARNING("Attempting to initialize a valid mesh");
+    return Quartz_Success;
+  }
+
   OpalMeshInitInfo meshInfo {};
   meshInfo.vertexCount = vertices.size();
   meshInfo.pVertices = vertices.data();
@@ -59,6 +83,8 @@ QuartzResult Mesh::Init(const std::vector<Vertex>& vertices, const std::vector<u
   meshInfo.pIndices = indices.data();
 
   QTZ_ATTEMPT_OPAL(OpalMeshInit(&m_opalMesh, meshInfo));
+
+  m_isValid = true;
   return Quartz_Success;
 }
 
@@ -78,6 +104,12 @@ QuartzResult LoadTinyObjMesh(const char* path, tinyobj::attrib_t* attrib, std::v
 
 QuartzResult Mesh::Init(const char* path)
 {
+  if (m_isValid)
+  {
+    QTZ_WARNING("Attempting to initialize a valid mesh");
+    return Quartz_Success;
+  }
+
   // TODO : Replace with custom model loader for better control
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
@@ -162,18 +194,31 @@ QuartzResult Mesh::Init(const char* path)
     v->tangent = Vec3Normalize(Vec3SubtractVec3(v->tangent, Vec3MultiplyFloat(v->normal, Vec3Dot(v->normal, v->tangent))));
   }
 
-  Init(verticies, indices);
+  QTZ_ATTEMPT(Init(verticies, indices));
 
+  m_isValid = true;
   return Quartz_Success;
 }
 
 void Mesh::Shutdown()
 {
+  if (!m_isValid)
+  {
+    return;
+  }
+
+  m_isValid = false;
   OpalMeshShutdown(&m_opalMesh);
 }
 
 void Mesh::Render() const
 {
+  if (!m_isValid)
+  {
+    QTZ_ERROR("Attempting to render invalid mesh");
+    return;
+  }
+
   OpalRenderMesh(m_opalMesh);
 }
 

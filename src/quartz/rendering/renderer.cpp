@@ -30,7 +30,7 @@ QuartzResult Renderer::Init(Window* window)
   };
 
   OpalInitInfo opalInfo;
-  opalInfo.debug = false;
+  opalInfo.debug = true;
   opalInfo.vertexStruct.count = vertexFormatCount;
   opalInfo.vertexStruct.pFormats = vertexFormats;
 
@@ -328,65 +328,6 @@ QuartzResult Renderer::Resize(uint32_t width, uint32_t height)
   QTZ_ATTEMPT_OPAL(OpalFramebufferReinit(m_imguiFramebuffer));
 
   return Quartz_Success;
-}
-
-Material Renderer::CreateMaterial(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs)
-{
-  Material newMaterial;
-  if (newMaterial.Init(m_renderpass, shaderPaths, inputs))
-  {
-    QTZ_ERROR("Failed to create the material");
-    // TODO : Proper error handling
-  }
-  return newMaterial;
-}
-
-Mesh Renderer::CreateMesh(const char* path)
-{
-  Mesh m;
-  if (m.Init(path))
-  {
-    QTZ_ERROR("Failed to create the mesh ({})", path);
-    // TODO : Proper error handling
-  }
-
-  return m;
-}
-
-Mesh Renderer::CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
-{
-  Mesh newMesh;
-  if (newMesh.Init(vertices, indices) != Quartz_Success)
-  {
-    QTZ_ATTEMPT_FAIL_LOG("Failed to build mesh");
-    // TODO : Proper error handling
-    return {};
-  }
-  return newMesh;
-}
-
-Texture Renderer::CreateTexture(const char* path)
-{
-  Texture newTexture;
-  if (newTexture.Init(path, m_imguiImageLayout) != Quartz_Success)
-  {
-    QTZ_ATTEMPT_FAIL_LOG("Failed to create texture");
-    // TODO : Proper error handling
-    return {};
-  }
-  return newTexture;
-}
-
-Buffer Renderer::CreateBuffer(uint32_t size)
-{
-  Buffer newBuffer;
-  if (newBuffer.Init(size) != Quartz_Success)
-  {
-    QTZ_ATTEMPT_FAIL_LOG("Failed to create buffer");
-    // TODO : Proper error handling
-    return {};
-  }
-  return newBuffer;
 }
 
 } // namespace Quartz

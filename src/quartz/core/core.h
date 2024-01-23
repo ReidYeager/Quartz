@@ -31,6 +31,13 @@ struct TimeKeepers
   } clocks;
 };
 
+struct ComponentIds
+{
+  ComponentId transform;
+  ComponentId renderable;
+  ComponentId camera;
+};
+
 struct CoreState
 {
   Window mainWindow;
@@ -38,6 +45,7 @@ struct CoreState
   TimeKeepers time;
   LayerStack layerStack;
   Diamond::EcsWorld ecsWorld;
+  ComponentIds ecsIds;
 
   Application* clientApp;
 };

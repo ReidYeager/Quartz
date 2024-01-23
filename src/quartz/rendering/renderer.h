@@ -10,42 +10,8 @@
 #include "quartz/rendering/texture.h"
 #include "quartz/rendering/buffer.h"
 
-#include <peridot.h>
-
 namespace Quartz
 {
-
-struct LightDirectional
-{
-  Vec3 color;
-  Vec3 direction;
-};
-
-#define QTZ_LIGHT_DIRECTIONAL_MAX_COUNT 1
-
-struct LightPoint
-{
-  Vec3 color;
-  Vec3 position;
-
-  float linear;
-  float quadratic;
-};
-
-#define QTZ_LIGHT_POINT_MAX_COUNT 4
-
-struct LightSpot
-{
-  Vec3 color;
-  Vec3 position;
-  Vec3 direction;
-
-  float inner;
-  float outer;
-
-  float linear;
-  float quadratic;
-};
 
 #define QTZ_LIGHT_SPOT_MAX_COUNT 2
 
@@ -110,13 +76,6 @@ static const std::vector<OpalBufferElement> packetElements = {
   Opal_Buffer_Float,  /*Spot - quadratic*/
 };
 
-struct Renderable
-{
-  class Mesh* mesh;
-  class Material* material;
-  Mat4 transformMatrix;
-};
-
 class Renderer
 {
 public:
@@ -139,11 +98,8 @@ public:
 
   QuartzResult Resize(uint32_t width, uint32_t height);
 
-  Material CreateMaterial(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs);
-  Mesh CreateMesh(const char* path);
-  Mesh CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
-  Texture CreateTexture(const char* path);
-  Buffer CreateBuffer(uint32_t size);
+  OpalInputLayout GetSingleImageLayout() const { return m_imguiImageLayout; }
+  OpalRenderpass GetRenderpass() const { return m_renderpass; } // TODO : Replace for flexibility
 
 private:
   QuartzResult InitImgui();

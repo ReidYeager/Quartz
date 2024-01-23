@@ -1,8 +1,11 @@
 #pragma once
 
-#include <stdint.h>
-
 #include "quartz/logging/logger.h"
+
+#define PERIDOT_VULKAN
+#include <peridot.h>
+
+#include <stdint.h>
 
 enum QuartzResult
 {
@@ -46,7 +49,7 @@ extern uint32_t g_quartzAttemptDepth;
   }                                                                                           \
 }
 
-#define QTZ_ATTEMPT_FAIL_LOG(...)             \
+#define QTZ_FAIL_LOG(...)                     \
 {                                             \
     QTZ_ERROR(__VA_ARGS__);                   \
     QTZ_ERROR("\t{}:{}", __FILE__, __LINE__); \
