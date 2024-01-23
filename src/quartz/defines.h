@@ -31,6 +31,21 @@ extern uint32_t g_quartzAttemptDepth;
   }                                                                                           \
 }
 
+#define QTZ_ATTEMPT_VOID(fn, ...)                                                             \
+{                                                                                             \
+  Quartz::g_quartzAttemptDepth++;                                                             \
+  QuartzResult result = fn;                                                                   \
+  Quartz::g_quartzAttemptDepth--;                                                             \
+  if (result != Quartz_Success)                                                               \
+  {                                                                                           \
+    QTZ_ERROR("{} : \"{}\"\n\t{}:{}", Quartz::g_quartzAttemptDepth, #fn, __FILE__, __LINE__); \
+    {                                                                                         \
+      __VA_ARGS__;                                                                            \
+    }                                                                                         \
+    return;                                                                                   \
+  }                                                                                           \
+}
+
 #define QTZ_ATTEMPT_FAIL_LOG(...)             \
 {                                             \
     QTZ_ERROR(__VA_ARGS__);                   \

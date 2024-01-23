@@ -1,4 +1,6 @@
 
+#if 0
+
 #include "quartz/defines.h"
 #include "quartz.h"
 
@@ -151,6 +153,7 @@ void Run()
       Camera* cam = (Camera*)camerasIter.GetComponent(cameraComponentId);
       scenePacket.viewProjectionMatrix = Mat4MuliplyMat4(cam->projectionMatrix, Mat4Invert(TransformToMat4(*camTransform)));
       scenePacket.camPos = camTransform->position;
+      scenePacket.camForward = QuaternionMultiplyVec3(QuaternionFromEuler(camTransform->rotation), Vec3{0.0f, 0.0f, -1.0f});
       renderer.PushSceneData(&scenePacket);
 
       while (!renderableIter.AtEnd())
@@ -338,3 +341,5 @@ ObjectIterator::ObjectIterator(const std::vector<ComponentId>& componentIds)
 }
 
 } // namespace Quartz
+
+#endif

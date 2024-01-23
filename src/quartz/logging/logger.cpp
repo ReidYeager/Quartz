@@ -1,5 +1,5 @@
 
-#include "quartz.h"
+#include "quartz/logging/logger.h"
 
 #include "spdlog/sinks/stdout_color_sinks.h"
 

@@ -1,64 +1,61 @@
 
+#ifdef QTZ_PLATFORM_WIN32
+
 #include "quartz/defines.h"
 #include "quartz/platform/defines.h"
 #include "quartz/platform/platform.h"
+#include "quartz/platform/input/input.h"
+#include "quartz/events/event.h"
 #include "quartz/platform/window/window.h"
 
-#ifdef QTZ_PLATFORM_WIN32
+#include <imgui.h>
+#include <backends/imgui_impl_win32.h>
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 namespace Quartz
 {
 
-#define QTZ_WIN32_WINDOW_CLASS_NAME "QuartzWin32WindowClass"
-LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, LPARAM lparam);
-class WindowWin32* thisWindow;
-
-class WindowWin32 : public Window
-{
-  friend LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, LPARAM lparam);
-
-public:
-  QuartzResult Init() override;
-  void Shutdown() override;
-  void PollEvents() override;
-
-private:
-  QuartzResult Register();
-  QuartzResult CreateWindow();
-  QuartzResult RegisterInput();
-}; // class WindowWin32
-
-Window* CreateWindow()
-{
-  Window* win = new WindowWin32();
-  if (win->Init())
-  {
-    QTZ_ERROR("Failed to create a win32 window");
-    return nullptr;
-  }
-
-  return win;
-}
-
+// Global variables
 // ============================================================
+
+static Window* g_pollingWindow = nullptr;
+#define QTZ_WIN32_WINDOW_CLASS_NAME "QuartzWin32WindowClass"
+
+// Declarations
+// ============================================================
+
+LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, LPARAM lparam);
+
 // Init
 // ============================================================
 
-QuartzResult WindowWin32::Init()
+QuartzResult Window::Init(WindowInitInfo initInfo)
 {
   QTZ_ATTEMPT(Register());
-  QTZ_ATTEMPT(CreateWindow());
+  QTZ_ATTEMPT(CreatePlatformWindow(initInfo));
   QTZ_ATTEMPT(RegisterInput());
 
   // Set visibility
   ShowWindow(m_platformInfo.hwnd, SW_SHOW);
 
-  QTZ_INFO("Window init");
-  thisWindow = this;
+  // Set basic information
+  m_eventCallbackFunction = initInfo.eventCallbackFunction;
+  m_width = initInfo.width;
+  m_height = initInfo.height;
+
+  uint32_t titleLength = strlen(initInfo.title) + 1;
+  while (m_title == nullptr)
+  {
+    m_title = (char*)malloc(titleLength);
+  }
+  memcpy(m_title, initInfo.title, titleLength);
+
+  QTZ_INFO("Window init complete (\"{}\")", m_title);
 
   return Quartz_Success;
 }
 
-QuartzResult WindowWin32::Register()
+QuartzResult Window::Register()
 {
   m_platformInfo.hinstance = GetModuleHandleA(0);
 
@@ -75,19 +72,19 @@ QuartzResult WindowWin32::Register()
   wc.lpszClassName = QTZ_WIN32_WINDOW_CLASS_NAME;
   wc.lpszMenuName = NULL;
 
-  int x = RegisterClassA(&wc);
+  int result = RegisterClassA(&wc);
 
-  if (x == 0)
+  if (result == 0)
   {
-    QTZ_ERROR("Failed to register win32 window");
+    QTZ_ERROR("Failed to register win32 window -- err {}", result);
     return Quartz_Failure;
   }
   return Quartz_Success;
 }
 
-QuartzResult WindowWin32::CreateWindow()
+QuartzResult Window::CreatePlatformWindow(WindowInitInfo initInfo)
 {
-  uint32_t resizability = (WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX); // * canResize
+  uint32_t resizability = (WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
 
   uint32_t windowStyle = resizability | WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU;
   uint32_t windowExStyle = WS_EX_APPWINDOW;
@@ -95,16 +92,16 @@ QuartzResult WindowWin32::CreateWindow()
   // Adjust extents so the canvas matches the input extents
   RECT borderRect = { 0, 0, 0, 0 };
   AdjustWindowRectEx(&borderRect, windowStyle, 0, windowExStyle);
-  uint32_t adjustedWidth = m_width + borderRect.right - borderRect.left;
-  uint32_t adjustedHeight = m_height + borderRect.bottom - borderRect.top;
+  uint32_t adjustedWidth = initInfo.width + borderRect.right - borderRect.left;
+  uint32_t adjustedHeight = initInfo.height + borderRect.bottom - borderRect.top;
 
   m_platformInfo.hwnd = CreateWindowExA(
     windowExStyle,
     QTZ_WIN32_WINDOW_CLASS_NAME,
-    m_title,
+    initInfo.title,
     windowStyle,
-    1720, // X screen position
-    50, // Y screen position
+    initInfo.posX,
+    initInfo.posY,
     adjustedWidth,
     adjustedHeight,
     0,
@@ -120,7 +117,7 @@ QuartzResult WindowWin32::CreateWindow()
   return Quartz_Success;
 }
 
-QuartzResult WindowWin32::RegisterInput()
+QuartzResult Window::RegisterInput()
 {
 #ifndef HID_USAGE_PAGE_GENERIC
 #define HID_USAGE_PAGE_GENERIC ((USHORT) 0x01)
@@ -142,75 +139,81 @@ QuartzResult WindowWin32::RegisterInput()
   return Quartz_Success;
 }
 
-// ============================================================
 // Update
 // ============================================================
 
-void WindowWin32::PollEvents()
+QuartzResult Window::PollEvents()
 {
   MSG message;
   uint32_t allowance = 100; // Limit number of messages allowed to process per call
   m_input.UpdateState();
+
+  g_pollingWindow = this;
+
   while (allowance > 0 && PeekMessageA(&message, m_platformInfo.hwnd, 0, 0, PM_REMOVE))
   {
     allowance--;
     TranslateMessage(&message);
     DispatchMessage(&message);
   }
+
+  g_pollingWindow = nullptr;
+
+  return Quartz_Success;
 }
 
 LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, LPARAM lparam)
 {
-  if (thisWindow == nullptr)
+  if (g_pollingWindow == nullptr)
     return DefWindowProcA(hwnd, message, wparam, lparam);
 
-  thisWindow->m_platformInputCallbackFunction(hwnd, message, wparam, lparam);
+  ImGui_ImplWin32_WndProcHandler(hwnd, message, wparam, lparam);
 
   switch (message)
   {
   case WM_CLOSE:
   {
+    g_pollingWindow->m_shouldClose = true;
     EventWindowClose e;
-    thisWindow->m_shouldClose = true;
-    thisWindow->m_eventCallbackFunction(e);
+    g_pollingWindow->m_eventCallbackFunction(e);
   } return 0;
   case WM_SIZE:
   {
-    bool wasMinimized = thisWindow->m_minimized;
-    thisWindow->m_minimized = wparam == SIZE_MINIMIZED;
+    bool wasMinimized = g_pollingWindow->m_minimized;
+    g_pollingWindow->m_minimized = wparam == SIZE_MINIMIZED;
     if (wparam == SIZE_MINIMIZED)
     {
       EventWindowMinimize e(true);
-      thisWindow->m_eventCallbackFunction(e);
+      g_pollingWindow->m_eventCallbackFunction(e);
     }
     else
     {
       if (wasMinimized)
       {
         EventWindowMinimize e(false);
-        thisWindow->m_eventCallbackFunction(e);
+        g_pollingWindow->m_eventCallbackFunction(e);
       }
 
       uint32_t w = LOWORD(lparam);
       uint32_t h = HIWORD(lparam);
-      thisWindow->m_width = w;
-      thisWindow->m_height = h;
+      g_pollingWindow->m_width = w;
+      g_pollingWindow->m_height = h;
       EventWindowResize e(w, h);
-      thisWindow->m_eventCallbackFunction(e);
+      g_pollingWindow->m_eventCallbackFunction(e);
     }
   } return 0;
   case WM_KILLFOCUS:
   case WM_SETFOCUS:
   {
     EventWindowFocus e(message == WM_SETFOCUS);
-    thisWindow->m_eventCallbackFunction(e);
+    g_pollingWindow->m_eventCallbackFunction(e);
   } return 0;
   case WM_MOVE:
   {
     int32_t x = LOWORD(lparam);
     int32_t y = HIWORD(lparam);
     EventWindowMove e(x, y);
-    thisWindow->m_eventCallbackFunction(e);
+    g_pollingWindow->m_eventCallbackFunction(e);
   } return 0;
 
   // Keyboard
@@ -230,10 +233,10 @@ LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, 
     default: break;
     }
 
-    // NOTE : Want to separate input state update and input event call?
-    thisWindow->m_input.HandlePress(PlatformKeyToQuartzInputCode[keycode]);
+    // TODO : Remove input handling here. Replace with layer that uses the events
+    g_pollingWindow->m_input.HandlePress(PlatformKeyToQuartzInputCode[keycode]);
     EventKeyPressed e(PlatformKeyToQuartzInputCode[keycode]);
-    thisWindow->m_eventCallbackFunction(e);
+    g_pollingWindow->m_eventCallbackFunction(e);
   } return 0;
   case WM_KEYUP:
   case WM_SYSKEYUP:
@@ -250,38 +253,38 @@ LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, 
     default: break;
     }
 
-    // NOTE : Want to separate input state update and input event call?
-    thisWindow->m_input.HandleRelease(PlatformKeyToQuartzInputCode[keycode]);
+    // TODO : Remove input handling here. Replace with layer that uses the events
+    g_pollingWindow->m_input.HandleRelease(PlatformKeyToQuartzInputCode[keycode]);
     EventKeyReleased e(PlatformKeyToQuartzInputCode[keycode]);
-    thisWindow->m_eventCallbackFunction(e);
+    g_pollingWindow->m_eventCallbackFunction(e);
   } return 0;
 
   // Mouse
   // ===============
   case WM_MOUSEMOVE:
   {
-    // NOTE : Want to separate input state update and input event call?
     int32_t x = GET_X_LPARAM(lparam);
     int32_t y = GET_Y_LPARAM(lparam);
-    thisWindow->m_input.HandleMouseMove({x, y});
+    // TODO : Remove input handling here. Replace with layer that uses the events
+    g_pollingWindow->m_input.HandleMouseMove({x, y});
     EventMouseMove e(x, y);
-    thisWindow->m_eventCallbackFunction(e);
+    g_pollingWindow->m_eventCallbackFunction(e);
   } return 0;
   case WM_MOUSEWHEEL:
   {
-    // NOTE : Want to separate input state update and input event call?
     int32_t y = GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA;
-    thisWindow->m_input.HandleMouseScroll(Vec2I{ 0, y });
+    // TODO : Remove input handling here. Replace with layer that uses the events
+    g_pollingWindow->m_input.HandleMouseScroll(Vec2I{ 0, y });
     EventMouseScroll e(0, y);
-    thisWindow->m_eventCallbackFunction(e);
+    g_pollingWindow->m_eventCallbackFunction(e);
   } return 0;
   case WM_MOUSEHWHEEL:
   {
-    // NOTE : Want to separate input state update and input event call?
     int32_t x = GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA;
-    thisWindow->m_input.HandleMouseScroll(Vec2I{ x, 0 });
+    // TODO : Remove input handling here. Replace with layer that uses the events
+    g_pollingWindow->m_input.HandleMouseScroll(Vec2I{ x, 0 });
     EventMouseScroll e(x, 0);
-    thisWindow->m_eventCallbackFunction(e);
+    g_pollingWindow->m_eventCallbackFunction(e);
   } return 0;
   case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
   case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
@@ -297,10 +300,10 @@ LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, 
     case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK: button = GET_XBUTTON_WPARAM(wparam) + 2; break;
     default: break;
     }
-    // NOTE : Want to separate input state update and input event call?
-    thisWindow->m_input.HandleMousePress(button);
+    // TODO : Remove input handling here. Replace with layer that uses the events
+    g_pollingWindow->m_input.HandleMousePress(button);
     EventMouseButtonPress e(button);
-    thisWindow->m_eventCallbackFunction(e);
+    g_pollingWindow->m_eventCallbackFunction(e);
   } return 0;
   case WM_LBUTTONUP:
   case WM_RBUTTONUP:
@@ -316,24 +319,27 @@ LRESULT CALLBACK Win32InputCallback(HWND hwnd, uint32_t message, WPARAM wparam, 
     case WM_XBUTTONUP: button = GET_XBUTTON_WPARAM(wparam) + 2; break;
     default: break;
     }
-    // NOTE : Want to separate input state update and input event call?
-    thisWindow->m_input.HandleMouseRelease(button);
+    // TODO : Remove input handling here. Replace with layer that uses the events
+    g_pollingWindow->m_input.HandleMouseRelease(button);
     EventMouseButtonRelease e(button);
-    thisWindow->m_eventCallbackFunction(e);
+    g_pollingWindow->m_eventCallbackFunction(e);
   } return 0;
   default: return DefWindowProcA(hwnd, message, wparam, lparam);
   }
 }
 
-// ============================================================
 // Shutdown
 // ============================================================
 
-void WindowWin32::Shutdown()
+void Window::Shutdown()
 {
+  std::string title(m_title);
+
   DestroyWindow(m_platformInfo.hwnd);
   UnregisterClassA(QTZ_WIN32_WINDOW_CLASS_NAME, m_platformInfo.hinstance);
-  QTZ_INFO("Window shutdown");
+  free(m_title);
+
+  QTZ_INFO("Window shutdown complete (\"{}\")", title.c_str());
 }
 
 } // namespace Quartz

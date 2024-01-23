@@ -30,7 +30,7 @@ QuartzResult Renderer::Init(Window* window)
   };
 
   OpalInitInfo opalInfo;
-  opalInfo.debug = true;
+  opalInfo.debug = false;
   opalInfo.vertexStruct.count = vertexFormatCount;
   opalInfo.vertexStruct.pFormats = vertexFormats;
 
@@ -38,12 +38,12 @@ QuartzResult Renderer::Init(Window* window)
   windowInfo.extents.width = window->Width();
   windowInfo.extents.height = window->Height();
 
-  const WindowPlatformInfo* platformInfo = window->PlatformInfo();
+  const WindowPlatformInfo platformInfo = window->PlatformInfo();
 #ifdef QTZ_PLATFORM_WIN32
-  opalInfo.windowPlatformInfo.hinstance = platformInfo->hinstance;
-  opalInfo.windowPlatformInfo.hwnd = platformInfo->hwnd;
-  windowInfo.platformInfo.hinstance = platformInfo->hinstance;
-  windowInfo.platformInfo.hwnd = platformInfo->hwnd;
+  opalInfo.windowPlatformInfo.hinstance = platformInfo.hinstance;
+  opalInfo.windowPlatformInfo.hwnd = platformInfo.hwnd;
+  windowInfo.platformInfo.hinstance = platformInfo.hinstance;
+  windowInfo.platformInfo.hwnd = platformInfo.hwnd;
 #endif // QTZ_PLATFORM_WIN32
 
   QTZ_ATTEMPT_OPAL(OpalInit(opalInfo));
@@ -360,8 +360,8 @@ Mesh Renderer::CreateMesh(const std::vector<Vertex>& vertices, const std::vector
   {
     QTZ_ATTEMPT_FAIL_LOG("Failed to build mesh");
     // TODO : Proper error handling
+    return {};
   }
-
   return newMesh;
 }
 
@@ -372,6 +372,7 @@ Texture Renderer::CreateTexture(const char* path)
   {
     QTZ_ATTEMPT_FAIL_LOG("Failed to create texture");
     // TODO : Proper error handling
+    return {};
   }
   return newTexture;
 }
@@ -383,6 +384,7 @@ Buffer Renderer::CreateBuffer(uint32_t size)
   {
     QTZ_ATTEMPT_FAIL_LOG("Failed to create buffer");
     // TODO : Proper error handling
+    return {};
   }
   return newBuffer;
 }
