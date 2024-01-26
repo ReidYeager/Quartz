@@ -36,6 +36,9 @@ struct ComponentIds
   ComponentId transform;
   ComponentId renderable;
   ComponentId camera;
+  ComponentId lightDir;
+  ComponentId lightPoint;
+  ComponentId lightSpot;
 };
 
 struct CoreState

@@ -48,13 +48,14 @@ QuartzResult CoreInit()
   // init resource pools
 
   QTZ_ATTEMPT(InitEcs());
-  InitClocks();
   QTZ_ATTEMPT(InitLayers());
 
   QTZ_INFO("Core initialized");
 
   g_coreState.clientApp = GetClientApplication();
   QTZ_ATTEMPT(g_coreState.clientApp->Init());
+
+  InitClocks();
 
   return Quartz_Success;
 }
@@ -67,8 +68,8 @@ QuartzResult InitWindow()
   WindowInitInfo windowInfo = {};
   windowInfo.width = 1280;
   windowInfo.height = 720;
-  windowInfo.posX = 1280;
-  windowInfo.posY = 50;
+  windowInfo.posX = 600;
+  windowInfo.posY = 300;
   windowInfo.title = "Test new window";
   windowInfo.eventCallbackFunction = EventCallback;
 
@@ -91,9 +92,12 @@ QuartzResult InitRenderer()
 
 QuartzResult InitEcs()
 {
-  g_coreState.ecsIds.transform = QuartzDefineComponent(Transform);
+  g_coreState.ecsIds.transform  = QuartzDefineComponent(Transform);
   g_coreState.ecsIds.renderable = QuartzDefineComponent(Renderable);
-  g_coreState.ecsIds.camera = QuartzDefineComponent(Camera);
+  g_coreState.ecsIds.camera     = QuartzDefineComponent(Camera);
+  g_coreState.ecsIds.lightDir   = QuartzDefineComponent(LightDirectional);
+  g_coreState.ecsIds.lightPoint = QuartzDefineComponent(LightPoint);
+  g_coreState.ecsIds.lightSpot  = QuartzDefineComponent(LightSpot);
 
   return Quartz_Success;
 }

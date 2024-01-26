@@ -8,7 +8,8 @@
 namespace Quartz
 {
 
-Material::Material(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs)
+Material::Material(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs) :
+  m_isValid(false), m_isBase(true)
 {
   QTZ_ATTEMPT_VOID(Init(shaderPaths, inputs));
 }
@@ -20,6 +21,7 @@ QuartzResult Material::Init(const std::vector<std::string>& shaderPaths, const s
     QTZ_WARNING("Attempting to initialize a valid material");
     return Quartz_Success;
   }
+  m_isBase = true;
 
   QTZ_ATTEMPT(InitInputs(inputs));
   QTZ_ATTEMPT(InitShaders(shaderPaths));
@@ -38,6 +40,54 @@ QuartzResult Material::Init(const std::vector<std::string>& shaderPaths, const s
   return Quartz_Success;
 }
 
+Material::Material(Material& existingMaterial, const std::vector<MaterialInputValue>& inputs) :
+  m_isValid(false), m_isBase(false)
+{
+  QTZ_ATTEMPT_VOID(Init(existingMaterial, inputs));
+}
+
+QuartzResult Material::Init(Material& existingMaterial, const std::vector<MaterialInputValue>& inputs)
+{
+  if (m_isValid)
+  {
+    QTZ_WARNING("Attempting to initialize a valid material");
+    return Quartz_Success;
+  }
+  if (!existingMaterial.m_isValid)
+  {
+    QTZ_ERROR("Attempting to create an instance of an invalid material");
+    return Quartz_Failure;
+  }
+  if (!existingMaterial.m_isBase)
+  {
+    QTZ_ERROR("Attempting to create an instance of a material instance");
+    return Quartz_Failure;
+  }
+  if (existingMaterial.m_inputs.size() != inputs.size())
+  {
+    QTZ_ERROR(
+      "Attempting to create a material instance with an invalid number of inputs ({} should be {}",
+      inputs.size(),
+      existingMaterial.m_inputs.size());
+    return Quartz_Failure;
+  }
+
+  m_isBase = false;
+  m_layout = existingMaterial.m_layout;
+
+  m_inputs = existingMaterial.m_inputs;
+  for (uint32_t i = 0; i < inputs.size(); i++)
+  {
+    m_inputs[i].value = inputs[i];
+  }
+
+  QTZ_ATTEMPT(InitInputs(m_inputs));
+
+  m_parent = &existingMaterial;
+  m_isValid = true;
+  return Quartz_Success;
+}
+
 QuartzResult Material::InitInputs(const std::vector<MaterialInput>& inputs)
 {
   std::vector<OpalInputAccessInfo> infos(inputs.size());
@@ -51,35 +101,38 @@ QuartzResult Material::InitInputs(const std::vector<MaterialInput>& inputs)
     {
     case Input_Texture:
     {
-      if (!inputs[i].texture.IsValid())
+      if (!inputs[i].value.texture.IsValid())
       {
         QTZ_ERROR("Attempting to use an invalid texture as material input {}", i);
         return Quartz_Failure;
       }
 
-      values[i].image = inputs[i].texture.m_opalImage;
+      values[i].image = inputs[i].value.texture.m_opalImage;
       infos[i].type = Opal_Input_Type_Samped_Image;
     } break;
     case Input_Buffer:
     {
-      if (!inputs[i].buffer.IsValid())
+      if (!inputs[i].value.buffer.IsValid())
       {
         QTZ_ERROR("Attempting to use an invalid buffer as material input {}", i);
         return Quartz_Failure;
       }
 
-      values[i].buffer = inputs[i].buffer.m_opalBuffer;
+      values[i].buffer = inputs[i].value.buffer.m_opalBuffer;
       infos[i].type = Opal_Input_Type_Uniform_Buffer;
     } break;
     default: return Quartz_Failure;
     }
   }
 
-  OpalInputLayoutInitInfo layoutInfo;
-  layoutInfo.count = infos.size();
-  layoutInfo.pInputs = infos.data();
+  if (m_isBase)
+  {
+    OpalInputLayoutInitInfo layoutInfo;
+    layoutInfo.count = infos.size();
+    layoutInfo.pInputs = infos.data();
 
-  QTZ_ATTEMPT_OPAL(OpalInputLayoutInit(&m_layout, layoutInfo));
+    QTZ_ATTEMPT_OPAL(OpalInputLayoutInit(&m_layout, layoutInfo));
+  }
 
   OpalInputSetInitInfo setInfo;
   setInfo.layout = m_layout;
@@ -93,14 +146,7 @@ QuartzResult Material::InitShaders(const std::vector<std::string>& shaderPaths)
 {
   char* fileBuffer;
 
-  if (m_shaders.size())
-  {
-    for (uint32_t i = 0; i < m_shaders.size(); i++)
-    {
-      OpalShaderShutdown(&m_shaders[i]);
-    }
-  }
-  else
+  if (!m_shaders.size())
   {
     m_shaders.resize(2);
   }
@@ -151,17 +197,27 @@ QuartzResult Material::Bind() const
     return Quartz_Failure;
   }
 
-  OpalRenderBindMaterial(m_material);
+  OpalMaterial mat = (m_isBase) ? m_material : m_parent->m_material;
+
+  OpalRenderBindMaterial(mat);
   OpalRenderBindInputSet(Renderer::SceneSet(), 0);
   OpalRenderBindInputSet(m_set, 1);
+
   return Quartz_Success;
 }
 
 Material::~Material()
 {
-  if (m_isValid)
+  if (m_isBase)
   {
-    QTZ_ERROR("Material must be shut down manually");
+    if (m_isValid)
+    {
+      QTZ_ERROR("Material must be shut down manually");
+    }
+    else
+    {
+      Shutdown();
+    }
   }
 }
 
@@ -172,29 +228,44 @@ void Material::Shutdown()
     return;
   }
 
-  OpalMaterialShutdown(&m_material);
-  OpalInputLayoutShutdown(&m_layout);
-  OpalInputSetShutdown(&m_set);
-
-  for (uint32_t i = 0; i < m_shaders.size(); i++)
+  if (m_isBase)
   {
-    OpalShaderShutdown(&m_shaders[i]);
+    OpalMaterialShutdown(&m_material);
+    for (uint32_t i = 0; i < m_shaders.size(); i++)
+    {
+      OpalShaderShutdown(&m_shaders[i]);
+    }
+
+    OpalInputLayoutShutdown(&m_layout);
   }
+
+  OpalInputSetShutdown(&m_set);
 
   m_isValid = false;
 }
 
-void Material::Reload()
+QuartzResult Material::Reload()
 {
   if (!m_isValid)
   {
     QTZ_WARNING("Attempting to reload an invalid material");
-    return;
+    return Quartz_Success;
   }
 
-  OpalWaitIdle();
-  Shutdown();
-  Init(m_shaderPaths, m_inputs);
+  if (!m_isBase)
+  {
+    m_parent->Reload();
+  }
+  else
+  {
+    OpalWaitIdle();
+
+    OpalMaterialShutdown(&m_material);
+    QTZ_ATTEMPT(InitShaders(m_shaderPaths));
+    QTZ_ATTEMPT(InitMaterial());
+  }
+
+  return Quartz_Success;
 }
 
 

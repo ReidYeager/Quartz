@@ -43,7 +43,6 @@ struct LightDirectional
   Vec3 color;
   Vec3 direction;
 };
-
 #define QTZ_LIGHT_DIRECTIONAL_MAX_COUNT 1
 
 struct LightPoint
@@ -54,7 +53,6 @@ struct LightPoint
   float linear;
   float quadratic;
 };
-
 #define QTZ_LIGHT_POINT_MAX_COUNT 4
 
 struct LightSpot
@@ -69,6 +67,7 @@ struct LightSpot
   float linear;
   float quadratic;
 };
+#define QTZ_LIGHT_SPOT_MAX_COUNT 2
 
 struct Renderable
 {
@@ -85,6 +84,7 @@ struct Camera
   float farClip;
   Mat4 projectionMatrix;
   Mat4 viewProjectionMatrix;
+  Vec3 pos;
 };
 
 } // namespace Quartz

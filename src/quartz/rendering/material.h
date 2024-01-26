@@ -16,33 +16,41 @@ enum MaterialInputType
   Input_Texture
 };
 
+union MaterialInputValue
+{
+  Texture texture;
+  Buffer buffer;
+};
+
 struct MaterialInput
 {
   MaterialInputType type;
-  union
-  {
-    Texture texture;
-    Buffer buffer;
-  };
+  MaterialInputValue value;
 };
 
 class Material
 {
 friend class Renderer;
+friend class MaterialInstance;
 
 public:
-  Material() : m_isValid(false) {}
+  Material() : m_isValid(false), m_isBase(true) {}
   Material(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs);
   QuartzResult Init(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs);
+  Material(Material& existingMaterial, const std::vector<MaterialInputValue>& inputs);
+  QuartzResult Init(Material& existingMaterial, const std::vector<MaterialInputValue>& inputs);
 
   ~Material();
 
   void Shutdown();
-  void Reload();
+  QuartzResult Reload();
   inline bool IsValid() const { return m_isValid; }
 
 private:
   bool m_isValid = false;
+  bool m_isBase = false;
+  Material* m_parent = nullptr;
+
   OpalRenderpass m_renderpass;
   OpalInputLayout m_layout;
   OpalBuffer m_buffer;

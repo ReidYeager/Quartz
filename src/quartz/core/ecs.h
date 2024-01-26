@@ -49,37 +49,35 @@ private:
 class ObjectIterator
 {
 public:
+  ObjectIterator() : m_isValid(false) {};
   ObjectIterator(const std::vector<ComponentId>& componentIds);
-
-  ~ObjectIterator()
-  {
-    delete m_iterator;
-  }
+  QuartzResult Init(const std::vector<ComponentId>& componentIds);
 
   void NextElement()
   {
-    m_iterator->StepNextElement();
+    m_iterator.StepNextElement();
   }
 
   bool AtEnd()
   {
-    return m_iterator->AtEnd();
+    return m_iterator.AtEnd();
   }
 
   template<typename T>
   T* Get()
   {
-    return (T*)m_iterator->GetComponent(Quartz::__ComponentId(typeid(T).name()));
+    return (T*)m_iterator.GetComponent(Quartz::__ComponentId(typeid(T).name()));
   }
 
   template<typename T>
   bool Has()
   {
-    return m_iterator->HasComponent(Quartz::__ComponentId(typeid(T).name()));
+    return m_iterator.HasComponent(Quartz::__ComponentId(typeid(T).name()));
   }
 
 private:
-  Diamond::EcsIterator* m_iterator;
+  bool m_isValid = false;
+  Diamond::EcsIterator m_iterator;
 };
 
 } // namespace Quartz

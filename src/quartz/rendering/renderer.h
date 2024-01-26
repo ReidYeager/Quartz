@@ -13,8 +13,6 @@
 namespace Quartz
 {
 
-#define QTZ_LIGHT_SPOT_MAX_COUNT 2
-
 struct ScenePacket
 {
   Mat4 viewProjectionMatrix;
@@ -25,39 +23,53 @@ struct ScenePacket
   struct
   {
     LightDirectional directional; //[QTZ_LIGHT_DIRECTIONAL_MAX_COUNT];
+
+    uint32_t pointCount;
     LightPoint pPoints[QTZ_LIGHT_POINT_MAX_COUNT];
+
+    uint32_t spotCount;
     LightSpot pSpots[QTZ_LIGHT_SPOT_MAX_COUNT];
   } lights;
 };
 
 static const std::vector<OpalBufferElement> packetElements = {
   Opal_Buffer_Mat4,   /*ViewProj*/
+
   Opal_Buffer_Float3, /*CamPos*/
   Opal_Buffer_Float3, /*CamFwd*/
   Opal_Buffer_Float3, /*Ambient color*/
 
   Opal_Buffer_Float3, /*Directional - color*/
   Opal_Buffer_Float3, /*Directional - direction*/
+  Opal_Buffer_Structure_End,
+
+  Opal_Buffer_Uint, /*Point count*/
 
   Opal_Buffer_Float3, /*Point - color*/
   Opal_Buffer_Float3, /*Point - position*/
   Opal_Buffer_Float,  /*Point - linear*/
   Opal_Buffer_Float,  /*Point - quadratic*/
+  Opal_Buffer_Structure_End,
 
   Opal_Buffer_Float3, /*Point - color*/
   Opal_Buffer_Float3, /*Point - position*/
   Opal_Buffer_Float,  /*Point - linear*/
   Opal_Buffer_Float,  /*Point - quadratic*/
+  Opal_Buffer_Structure_End,
 
   Opal_Buffer_Float3, /*Point - color*/
   Opal_Buffer_Float3, /*Point - position*/
   Opal_Buffer_Float,  /*Point - linear*/
   Opal_Buffer_Float,  /*Point - quadratic*/
+  Opal_Buffer_Structure_End,
 
   Opal_Buffer_Float3, /*Point - color*/
   Opal_Buffer_Float3, /*Point - position*/
   Opal_Buffer_Float,  /*Point - linear*/
   Opal_Buffer_Float,  /*Point - quadratic*/
+  Opal_Buffer_Structure_End,
+
+  Opal_Buffer_Uint, /*Spot count*/
 
   Opal_Buffer_Float3, /*Spot - color*/
   Opal_Buffer_Float3, /*Spot - position*/
@@ -66,6 +78,7 @@ static const std::vector<OpalBufferElement> packetElements = {
   Opal_Buffer_Float,  /*Spot - outer*/
   Opal_Buffer_Float,  /*Spot - linear*/
   Opal_Buffer_Float,  /*Spot - quadratic*/
+  Opal_Buffer_Structure_End,
 
   Opal_Buffer_Float3, /*Spot - color*/
   Opal_Buffer_Float3, /*Spot - position*/
@@ -74,6 +87,7 @@ static const std::vector<OpalBufferElement> packetElements = {
   Opal_Buffer_Float,  /*Spot - outer*/
   Opal_Buffer_Float,  /*Spot - linear*/
   Opal_Buffer_Float,  /*Spot - quadratic*/
+  Opal_Buffer_Structure_End,
 };
 
 class Renderer

@@ -26,6 +26,7 @@ void UpdateTimes();
 QuartzResult UpdateLayers();
 QuartzResult UpdateTransforms();
 QuartzResult UpdateCameraVisibility();
+QuartzResult UpdatePacket();
 
 // Rendering
 QuartzResult Render();
@@ -45,6 +46,7 @@ QuartzResult CoreMainLoop()
     QTZ_ATTEMPT(g_coreState.clientApp->Update(g_coreState.time.delta));
     QTZ_ATTEMPT(UpdateTransforms());
     QTZ_ATTEMPT(UpdateCameraVisibility());
+    QTZ_ATTEMPT(UpdatePacket());
     QTZ_ATTEMPT(Render());
   }
 
@@ -108,6 +110,7 @@ QuartzResult UpdateTransforms()
     Transform* t = camerasIter.Get<Transform>();
     Camera* c = camerasIter.Get<Camera>();
     c->viewProjectionMatrix = Mat4MuliplyMat4(c->projectionMatrix, Mat4Invert(TransformToMat4(*t)));
+    c->pos = t->position;
     camerasIter.NextElement();
   }
 
@@ -119,6 +122,38 @@ QuartzResult UpdateCameraVisibility()
   // Iterate through all cameras
   //   Determine objects visible to camera[i]
   //   Add objects' information for rendering
+
+  return Quartz_Success;
+}
+
+QuartzResult UpdatePacket()
+{
+  ObjectIterator lightDirIter({g_coreState.ecsIds.lightDir});
+  while (!lightDirIter.AtEnd())
+  {
+    g_packet.lights.directional = *lightDirIter.Get<LightDirectional>();
+    break; // only one directional light supported
+  }
+
+  uint32_t pointIndex = 0;
+  ObjectIterator lightPointIter({ g_coreState.ecsIds.lightPoint });
+  while (!lightPointIter.AtEnd() && pointIndex < 4)
+  {
+    g_packet.lights.pPoints[pointIndex] = *lightPointIter.Get<LightPoint>();
+    pointIndex++;
+    lightPointIter.NextElement();
+  }
+  g_packet.lights.pointCount = pointIndex;
+
+  uint32_t spotIndex = 0;
+  ObjectIterator lightSpotIter({ g_coreState.ecsIds.lightSpot });
+  while (!lightSpotIter.AtEnd() && spotIndex < 2)
+  {
+    g_packet.lights.pSpots[spotIndex] = *lightSpotIter.Get<LightSpot>();
+    spotIndex++;
+    lightSpotIter.NextElement();
+  }
+  g_packet.lights.spotCount = spotIndex;
 
   return Quartz_Success;
 }
@@ -145,14 +180,16 @@ QuartzResult RenderScene()
 {
   g_coreState.renderer.StartSceneRender();
 
-  QTZ_ATTEMPT(g_coreState.renderer.PushSceneData(&g_packet));
-
   ObjectIterator cameraIter({g_coreState.ecsIds.camera});
   ObjectIterator renderableIter({g_coreState.ecsIds.renderable});
 
   while (!cameraIter.AtEnd())
   {
-    g_packet.viewProjectionMatrix = cameraIter.Get<Camera>()->viewProjectionMatrix;
+    Camera* c = cameraIter.Get<Camera>();
+    g_packet.viewProjectionMatrix = c->viewProjectionMatrix;
+    g_packet.camPos = c->pos;
+
+    QTZ_ATTEMPT(g_coreState.renderer.PushSceneData(&g_packet));
 
     while (!renderableIter.AtEnd())
     {

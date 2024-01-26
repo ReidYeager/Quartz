@@ -6,11 +6,6 @@ namespace Quartz
 
 void CoreShutdown()
 {
-  QTZ_DEBUG(
-    "Average frame time : {} ms : {} frames",
-    (g_coreState.time.deltaSum / g_coreState.time.frameIndex) * 1000,
-    g_coreState.time.frameIndex);
-
   g_coreState.clientApp->Shutdown();
   delete g_coreState.clientApp;
 
@@ -22,6 +17,11 @@ void CoreShutdown()
 
   g_coreState.renderer.Shutdown();
   g_coreState.mainWindow.Shutdown();
+
+  QTZ_DEBUG(
+    "Average frame time : {} ms : {} frames",
+    (g_coreState.time.deltaSum / g_coreState.time.frameIndex) * 1000,
+    g_coreState.time.frameIndex);
 }
 
 } // namespace Quartz

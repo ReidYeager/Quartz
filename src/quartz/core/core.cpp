@@ -60,6 +60,16 @@ void EventCallback(Event& e)
   if (e.GetType() == Event_Window_Resize)
   {
     g_coreState.renderer.Resize(g_coreState.mainWindow.Width(), g_coreState.mainWindow.Height());
+
+    // TODO : Replace with a way to only update cameras that present to the affected texture/window
+    ObjectIterator cameraIter({g_coreState.ecsIds.camera});
+    while (!cameraIter.AtEnd())
+    {
+      Camera* c = cameraIter.Get<Camera>();
+      float ratio = (float)Quartz::WindowWidth() / (float)Quartz::WindowHeight();
+      c->projectionMatrix = ProjectionPerspectiveExtended(ratio, c->desiredRatio, c->fov, c->nearClip, c->farClip);
+      cameraIter.NextElement();
+    }
   }
 
   for (auto iterator = g_coreState.layerStack.EndIterator(); iterator != g_coreState.layerStack.BeginIterator();)

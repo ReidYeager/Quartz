@@ -53,7 +53,16 @@ Entity::~Entity()
 
 ObjectIterator::ObjectIterator(const std::vector<ComponentId>& componentIds)
 {
-  m_iterator = new Diamond::EcsIterator(&g_coreState.ecsWorld, componentIds);
+  m_iterator.Init(&g_coreState.ecsWorld, componentIds);
+  m_isValid = true;
+}
+
+QuartzResult ObjectIterator::Init(const std::vector<ComponentId>& componentIds)
+{
+  m_iterator.Init(&g_coreState.ecsWorld, componentIds);
+  m_isValid = true;
+
+  return Quartz_Success;
 }
 
 } // namespace Quartz
