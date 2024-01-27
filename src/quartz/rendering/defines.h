@@ -41,6 +41,7 @@ struct Vertex
 struct LightDirectional
 {
   Vec3 color;
+  float intensity;
   Vec3 direction;
 };
 #define QTZ_LIGHT_DIRECTIONAL_MAX_COUNT 1
@@ -48,24 +49,20 @@ struct LightDirectional
 struct LightPoint
 {
   Vec3 color;
+  float intensity;
   Vec3 position;
-
-  float linear;
-  float quadratic;
 };
 #define QTZ_LIGHT_POINT_MAX_COUNT 4
 
 struct LightSpot
 {
   Vec3 color;
+  float intensity;
   Vec3 position;
   Vec3 direction;
 
   float inner;
   float outer;
-
-  float linear;
-  float quadratic;
 };
 #define QTZ_LIGHT_SPOT_MAX_COUNT 2
 

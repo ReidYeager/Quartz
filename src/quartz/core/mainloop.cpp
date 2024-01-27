@@ -220,6 +220,10 @@ QuartzResult RenderImgui()
     iterator++;
   }
 
+  ImGui::Begin("Scene");
+  ImGui::DragFloat3("Ambient", (float*)&g_packet.ambientColor, 0.001f);
+  ImGui::End();
+
   ImGui::EndFrame();
   ImGui::Render();
   ImDrawData* drawData = ImGui::GetDrawData();

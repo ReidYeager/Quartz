@@ -68,7 +68,7 @@ QuartzResult Renderer::Init(Window* window)
   const uint32_t attachmentCount = 2;
   OpalAttachmentInfo attachments[attachmentCount];
   // Window buffer image
-  attachments[0].clearValue.color = OpalColorValue{ 0.1f, 0.8f, 0.8f, 1.0f };
+  attachments[0].clearValue.color = OpalColorValue{ 0.5f, 0.5f, 0.5f, 1.0f };
   attachments[0].format = Opal_Format_BGR8;
   attachments[0].loadOp = Opal_Attachment_Op_Clear;
   attachments[0].shouldStore = true;
