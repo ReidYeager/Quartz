@@ -41,7 +41,6 @@ QuartzResult CoreMainLoop()
 {
   while (!g_coreState.mainWindow.ShouldClose())
   {
-    QTZ_PROFILE_FRAME("MainLoop");
     UpdateTimes();
     g_coreState.mainWindow.PollEvents();
     QTZ_ATTEMPT(UpdateLayers());
@@ -107,7 +106,7 @@ QuartzResult UpdateTransforms()
   {
     Transform* t = renderableIter.Get<Transform>();
     Renderable* r = renderableIter.Get<Renderable>();
-    r->transformMatrix = TransformToMat4(*t);
+    r->transformMatrix = t->Matrix();
     renderableIter.NextElement();
   }
 
@@ -117,7 +116,7 @@ QuartzResult UpdateTransforms()
   {
     Transform* t = camerasIter.Get<Transform>();
     Camera* c = camerasIter.Get<Camera>();
-    c->viewProjectionMatrix = Mat4MuliplyMat4(c->projectionMatrix, Mat4Invert(TransformToMat4(*t)));
+    c->viewProjectionMatrix = c->projectionMatrix * t->Matrix().Inverted();
     c->pos = t->position;
     camerasIter.NextElement();
   }

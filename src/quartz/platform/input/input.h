@@ -51,7 +51,7 @@ public:
 
   static Vec2I GetMouseDelta()
   {
-    return Vec2ISubtractVec2I(prevState.mousePos, curState.mousePos);
+    return prevState.mousePos - curState.mousePos;
   }
 
   static Vec2I GetMouseScroll()

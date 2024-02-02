@@ -3,7 +3,7 @@
 #include "quartz/logging/logger.h"
 
 #define PERIDOT_VULKAN
-#define PERIDOT_C
+#define PERIDOT_NO_NAMESPACE
 #include <peridot.h>
 
 #include <stdint.h>

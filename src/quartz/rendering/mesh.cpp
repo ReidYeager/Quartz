@@ -163,11 +163,11 @@ QuartzResult Mesh::Init(const char* path)
     Vertex* vert2 = &verticies[indices[i + 1]];
     Vertex* vert3 = &verticies[indices[i + 2]];
 
-    Vec3 e1 = Vec3SubtractVec3(vert2->position, vert1->position);
-    Vec3 e2 = Vec3SubtractVec3(vert3->position, vert1->position);
+    Vec3 e1 = vert2->position - vert1->position;
+    Vec3 e2 = vert3->position - vert1->position;
 
-    Vec2 uv1 = Vec2SubtractVec2(vert2->uv, vert1->uv);
-    Vec2 uv2 = Vec2SubtractVec2(vert3->uv, vert1->uv);
+    Vec2 uv1 = vert2->uv - vert1->uv;
+    Vec2 uv2 = vert3->uv - vert1->uv;
 
     float r = 1.0f / (uv1.x * uv2.y - uv2.x * uv1.y);
 
@@ -179,23 +179,23 @@ QuartzResult Mesh::Init(const char* path)
       tangent = Vec3{0.0f, 0.0f, 0.0f};
     }
 
-    vert1->tangent = Vec3AddVec3(vert1->tangent, tangent);
-    vert2->tangent = Vec3AddVec3(vert2->tangent, tangent);
-    vert3->tangent = Vec3AddVec3(vert3->tangent, tangent);
+    vert1->tangent = vert1->tangent + tangent;
+    vert2->tangent = vert2->tangent + tangent;
+    vert3->tangent = vert3->tangent + tangent;
   }
 
   for (uint32_t i = 0; i < verticies.size(); i++)
   {
     Vertex* v = &verticies[i];
 
-    if (Vec3Compare(v->tangent, Vec3{ 0.0f, 0.0f, 0.0f }))
+    if (v->tangent == Vec3{ 0.0f, 0.0f, 0.0f })
     {
       // TODO : Find a proper fix for invalid tangents
       v->tangent = v->normal;
     }
 
     // Calculate orthogonal tangent
-    v->tangent = Vec3Normalize(Vec3SubtractVec3(v->tangent, Vec3MultiplyFloat(v->normal, Vec3Dot(v->normal, v->tangent))));
+    v->tangent = (v->tangent - (v->normal * Dot(v->normal, v->tangent))).Normal();
   }
 
   QTZ_ATTEMPT(Init(verticies, indices));

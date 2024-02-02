@@ -31,10 +31,10 @@ struct Vertex
 
   bool operator==(const Vertex& other) const
   {
-    return Vec3Compare(position, other.position)
-      && Vec3Compare(normal, other.normal)
-      && Vec2Compare(uv, other.uv)
-      && Vec3Compare(tangent, other.tangent);
+    return (position == other.position)
+      &&   (normal   == other.normal)
+      &&   (uv       == other.uv)
+      &&   (tangent  == other.tangent);
   }
 };
 
