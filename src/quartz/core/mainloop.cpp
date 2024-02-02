@@ -24,6 +24,7 @@ ScenePacket g_packet = {};
 // Preparation
 void UpdateTimes();
 QuartzResult UpdateLayers();
+QuartzResult UpdateClient();
 QuartzResult UpdateTransforms();
 QuartzResult UpdateCameraVisibility();
 QuartzResult UpdatePacket();
@@ -40,10 +41,11 @@ QuartzResult CoreMainLoop()
 {
   while (!g_coreState.mainWindow.ShouldClose())
   {
+    QTZ_PROFILE_FRAME("MainLoop");
     UpdateTimes();
     g_coreState.mainWindow.PollEvents();
     QTZ_ATTEMPT(UpdateLayers());
-    QTZ_ATTEMPT(g_coreState.clientApp->Update(g_coreState.time.delta));
+    QTZ_ATTEMPT(UpdateClient());
     QTZ_ATTEMPT(UpdateTransforms());
     QTZ_ATTEMPT(UpdateCameraVisibility());
     QTZ_ATTEMPT(UpdatePacket());
@@ -85,6 +87,12 @@ QuartzResult UpdateLayers()
     iterator++;
   }
 
+  return Quartz_Success;
+}
+
+QuartzResult UpdateClient()
+{
+  QTZ_ATTEMPT(g_coreState.clientApp->Update(g_coreState.time.delta));
   return Quartz_Success;
 }
 

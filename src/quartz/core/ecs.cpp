@@ -43,7 +43,7 @@ Entity::Entity()
 {
   m_id = g_coreState.ecsWorld.CreateEntity();
   Transform* t = (Transform*)__AddComponent(m_id, QuartzComponentId(Transform));
-  *t = transformIdentity;
+  *t = TransformIdentity;
 }
 
 Entity::~Entity()

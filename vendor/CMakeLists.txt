@@ -35,6 +35,5 @@ target_include_directories(VendorQuartz INTERFACE
 target_link_libraries(VendorQuartz INTERFACE
   opal
   diamond
-  Peridot
   spdlog
 )
