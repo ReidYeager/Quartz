@@ -6,6 +6,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 #include <unordered_map>
+#include <stdio.h>
 
 size_t HashInt(int32_t value)
 {
@@ -83,6 +84,9 @@ QuartzResult Mesh::Init(const std::vector<Vertex>& vertices, const std::vector<u
   meshInfo.pIndices = indices.data();
 
   QTZ_ATTEMPT_OPAL(OpalMeshInit(&m_opalMesh, meshInfo));
+
+  m_verticies = std::vector<Vertex>(vertices);
+  m_indices = std::vector<uint32_t>(indices);
 
   m_isValid = true;
   return Quartz_Success;
@@ -200,6 +204,35 @@ QuartzResult Mesh::Init(const char* path)
   return Quartz_Success;
 }
 
+QuartzResult Mesh::InitFromDump(const char* path)
+{
+  FILE* inFile;
+  int err = fopen_s(&inFile, path, "rb");
+  if (err)
+  {
+    QTZ_ERROR("Failed to open a mesh dump file (\"%s\")", path);
+    return Quartz_Failure;
+  }
+
+  std::vector<Vertex> verts;
+  std::vector<uint32_t> indices;
+  size_t vertCount;
+  size_t indexCount;
+
+  fread(&vertCount, sizeof(size_t), 1, inFile);
+  verts.resize(vertCount);
+  fread(verts.data(), sizeof(Vertex), vertCount, inFile);
+  fread(&indexCount, sizeof(size_t), 1, inFile);
+  indices.resize(indexCount);
+  fread(indices.data(), sizeof(uint32_t), indexCount, inFile);
+
+  fclose(inFile);
+
+  QTZ_ATTEMPT(Init(verts, indices));
+
+  return Quartz_Success;
+}
+
 void Mesh::Shutdown()
 {
   if (!m_isValid)
@@ -209,6 +242,27 @@ void Mesh::Shutdown()
 
   m_isValid = false;
   OpalMeshShutdown(&m_opalMesh);
+}
+
+void Mesh::Dump(const char* path)
+{
+  FILE* outFile;
+  int err = fopen_s(&outFile, path, "wb");
+  if (err)
+  {
+    QTZ_ERROR("Failed to open a file to dump the mesh (\"%s\")", path);
+    return;
+  }
+
+  size_t vertCount = m_verticies.size();
+  size_t indexCount = m_indices.size();
+
+  fwrite(&vertCount, sizeof(size_t), 1, outFile);
+  fwrite(m_verticies.data(), sizeof(Vertex), m_verticies.size(), outFile);
+  fwrite(&indexCount, sizeof(size_t), 1, outFile);
+  fwrite(m_indices.data(), sizeof(uint32_t), m_indices.size(), outFile);
+
+  fclose(outFile);
 }
 
 void Mesh::Render() const
