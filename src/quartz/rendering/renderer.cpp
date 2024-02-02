@@ -17,6 +17,34 @@ OpalInputSet Renderer::m_sceneSet;
 
 void ImguiVkResultCheck(VkResult error) {}
 
+void OpalMessageCallback(OpalMessageType type, const char* message)
+{
+  switch (type)
+  {
+  case Opal_Message_Info:
+  {
+    //QTZ_INFO("Opal : {}", message);
+  } break;
+  case Opal_Message_Debug:
+  {
+    QTZ_DEBUG("Opal : {}", message);
+  } break;
+  case Opal_Message_Warning:
+  {
+    QTZ_WARNING("Opal : {}", message);
+  } break;
+  case Opal_Message_Error:
+  {
+    QTZ_ERROR("Opal : {}", message);
+  } break;
+  case Opal_Message_Fatal:
+  {
+    QTZ_FATAL("Opal : {}", message);
+  } break;
+  default: break;
+  }
+}
+
 QuartzResult Renderer::Init(Window* window)
 {
   m_qWindow = window;
@@ -33,6 +61,7 @@ QuartzResult Renderer::Init(Window* window)
   opalInfo.debug = true;
   opalInfo.vertexStruct.count = vertexFormatCount;
   opalInfo.vertexStruct.pFormats = vertexFormats;
+  opalInfo.messageCallback = OpalMessageCallback;
 
   OpalWindowInitInfo windowInfo;
   windowInfo.extents.width = window->Width();

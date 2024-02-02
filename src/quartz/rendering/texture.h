@@ -18,8 +18,9 @@ public:
   Texture(const char* path);
 
   QuartzResult Init(const char* path);
-  //QuartzResult Init(const std::vector<Vec4>& pixels);
-  //QuartzResult Init(const std::vector<Vec3>& pixels);
+  QuartzResult Init(uint32_t width, uint32_t height, const std::vector<Vec3>& pixels);
+  QuartzResult Init(uint32_t width, uint32_t height, const std::vector<Vec4>& pixels);
+  QuartzResult Init(uint32_t width, uint32_t height, const std::vector<unsigned char>& pixels);
 
   void Shutdown();
   void* ForImgui();

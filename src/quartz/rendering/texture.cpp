@@ -52,10 +52,68 @@ QuartzResult Texture::Init(const char* path)
 
   if (width <= 0 || height <= 0 || source == nullptr)
   {
-    QTZ_ERROR("Failed to load the image");
+    QTZ_ERROR("Failed to load the image (\"{}\")", path);
     return Quartz_Failure_Vendor;
   }
 
+  std::vector<unsigned char> pixels(source, source + (width * height * 4));
+  QTZ_ATTEMPT(Init((uint32_t)width, (uint32_t)height, pixels));
+
+  stbi_image_free(source);
+
+  return Quartz_Success;
+}
+
+QuartzResult Texture::Init(uint32_t width, uint32_t height, const std::vector<Vec3>& pixels)
+{
+  if (width * height != pixels.size())
+  {
+    QTZ_ERROR("Initializing texture with incorrect number of pixels ({} should be {})", pixels.size(), width * height);
+    return Quartz_Failure;
+  }
+
+  std::vector<unsigned char> rgba8(width * height * 4);
+
+  for (uint32_t i = 0; i < pixels.size(); i++)
+  {
+    uint32_t index = i * 4;
+
+    rgba8[index + 0] = PeriClamp((uint8_t)(255 * pixels[i].r), 0, 255);
+    rgba8[index + 1] = PeriClamp((uint8_t)(255 * pixels[i].g), 0, 255);
+    rgba8[index + 2] = PeriClamp((uint8_t)(255 * pixels[i].b), 0, 255);
+    rgba8[index + 3] = PeriClamp((uint8_t)(255)              , 0, 255);
+  }
+
+  QTZ_ATTEMPT(Init(width, height, rgba8));
+  return Quartz_Success;
+}
+
+QuartzResult Texture::Init(uint32_t width, uint32_t height, const std::vector<Vec4>& pixels)
+{
+  if (width * height != pixels.size())
+  {
+    QTZ_ERROR("Initializing texture with incorrect number of pixels ({} should be {})", pixels.size(), width * height);
+    return Quartz_Failure;
+  }
+
+  std::vector<unsigned char> rgba8(width * height * 4);
+
+  for (uint32_t i = 0; i < pixels.size(); i++)
+  {
+    uint32_t index = i * 4;
+
+    rgba8[index + 0] = PeriClamp((uint8_t)(255 * pixels[i].r), 0, 255);
+    rgba8[index + 1] = PeriClamp((uint8_t)(255 * pixels[i].g), 0, 255);
+    rgba8[index + 2] = PeriClamp((uint8_t)(255 * pixels[i].b), 0, 255);
+    rgba8[index + 3] = PeriClamp((uint8_t)(255 * pixels[i].a), 0, 255);
+  }
+
+  QTZ_ATTEMPT(Init(width, height, rgba8));
+  return Quartz_Success;
+}
+
+QuartzResult Texture::Init(uint32_t width, uint32_t height, const std::vector<unsigned char>& pixels)
+{
   OpalImageInitInfo info = {};
   info.extent = OpalExtent{ (uint32_t)width, (uint32_t)height, 1 };
   info.sampleType = Opal_Sample_Bilinear;
@@ -63,9 +121,7 @@ QuartzResult Texture::Init(const char* path)
   info.format = Opal_Format_RGBA8;
 
   QTZ_ATTEMPT_OPAL(OpalImageInit(&m_opalImage, info));
-  QTZ_ATTEMPT_OPAL(OpalImageFill(m_opalImage, source));
-
-  stbi_image_free(source);
+  QTZ_ATTEMPT_OPAL(OpalImageFill(m_opalImage, (void*)pixels.data()));
 
   OpalInputValue inValue = {};
   inValue.image = m_opalImage;
