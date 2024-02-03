@@ -12,7 +12,9 @@ add_library (VendorQuartz INTERFACE)
 define_property(GLOBAL PROPERTY VendorQuartzSource INHERITED)
 set_property(GLOBAL PROPERTY VendorQuartzSource
   ${CMAKE_CURRENT_SOURCE_DIR}/header_only/stb_image.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/header_only/stb_image_write.h
   ${CMAKE_CURRENT_SOURCE_DIR}/header_only/tiny_obj_loader.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/header_only/tinyexr.h
 
   ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_demo.cpp

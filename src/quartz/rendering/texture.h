@@ -15,12 +15,15 @@ class Texture
 
 public:
   Texture() : m_isValid(false) {}
-  Texture(const char* path);
+  Texture(const char* path, bool isExr = false);
 
   QuartzResult Init(const char* path);
   QuartzResult Init(uint32_t width, uint32_t height, const std::vector<Vec3>& pixels);
   QuartzResult Init(uint32_t width, uint32_t height, const std::vector<Vec4>& pixels);
   QuartzResult Init(uint32_t width, uint32_t height, const std::vector<unsigned char>& pixels);
+
+  QuartzResult InitExr(const char* path);
+  QuartzResult InitHdr(uint32_t width, uint32_t height, const std::vector<float>& pixels);
 
   void Shutdown();
   void* ForImgui();

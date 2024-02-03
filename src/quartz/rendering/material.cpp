@@ -14,7 +14,7 @@ Material::Material(const std::vector<std::string>& shaderPaths, const std::vecto
   QTZ_ATTEMPT_VOID(Init(shaderPaths, inputs));
 }
 
-QuartzResult Material::Init(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs)
+QuartzResult Material::Init(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs, QuartzPipelineSettingFlags pipelineSettings)
 {
   if (m_isValid)
   {
@@ -22,6 +22,7 @@ QuartzResult Material::Init(const std::vector<std::string>& shaderPaths, const s
     return Quartz_Success;
   }
   m_isBase = true;
+  m_pipelineSettings = pipelineSettings;
 
   QTZ_ATTEMPT(InitInputs(inputs));
   QTZ_ATTEMPT(InitShaders(shaderPaths));
@@ -183,6 +184,9 @@ QuartzResult Material::InitMaterial()
   materialInfo.shaderCount = m_shaders.size();
   materialInfo.pShaders = m_shaders.data();
   materialInfo.pushConstantSize = sizeof(Mat4);
+
+  materialInfo.pipelineSettings = (OpalPipelineSettingFlags)m_pipelineSettings;
+
 
   QTZ_ATTEMPT_OPAL(OpalMaterialInit(&m_material, materialInfo));
 

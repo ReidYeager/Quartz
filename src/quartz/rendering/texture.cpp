@@ -5,15 +5,31 @@
 #include "quartz/rendering/renderer.h"
 #include "quartz/core/core.h"
 
+#define STBI_SUPPORT_ZLIB
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
+#define TINYEXR_USE_MINIZ 0
+#define TINYEXR_USE_STB_ZLIB 1
+#define TINYEXR_IMPLEMENTATION
+#include <tinyexr.h>
 
 namespace Quartz
 {
 
-Texture::Texture(const char* path)
+Texture::Texture(const char* path, bool isExr)
 {
-  QTZ_ATTEMPT_VOID(Init(path));
+  if (!isExr)
+  {
+    QTZ_ATTEMPT_VOID(Init(path));
+  }
+  else
+  {
+    QTZ_ATTEMPT_VOID(InitExr(path));
+  }
 }
 
 void Texture::Shutdown()
@@ -119,6 +135,57 @@ QuartzResult Texture::Init(uint32_t width, uint32_t height, const std::vector<un
   info.sampleType = Opal_Sample_Bilinear;
   info.usage = Opal_Image_Usage_Uniform;
   info.format = Opal_Format_RGBA8;
+
+  QTZ_ATTEMPT_OPAL(OpalImageInit(&m_opalImage, info));
+  QTZ_ATTEMPT_OPAL(OpalImageFill(m_opalImage, (void*)pixels.data()));
+
+  OpalInputValue inValue = {};
+  inValue.image = m_opalImage;
+
+  OpalInputSetInitInfo setInfo = {};
+  setInfo.layout = g_coreState.renderer.GetSingleImageLayout();
+  setInfo.pInputValues = &inValue;
+
+  QTZ_ATTEMPT_OPAL(OpalInputSetInit(&m_imguiSet, setInfo));
+
+  OpalInputInfo imageInput = {};
+  imageInput.type = Opal_Input_Type_Samped_Image;
+  imageInput.value.image = m_opalImage;
+  imageInput.index = 0;
+
+  QTZ_ATTEMPT_OPAL(OpalInputSetUpdate(m_imguiSet, 1, &imageInput));
+
+  m_isValid = true;
+  return Quartz_Success;
+}
+
+QuartzResult Texture::InitExr(const char* path)
+{
+  int width, height;
+  float* source = nullptr;
+  const char* err = nullptr;
+
+  if (LoadEXR(&source, &width, &height, path, &err))
+  {
+    QTZ_ERROR("Failed to load .exr file (\"{}\")\n    Error : \"{}\"", path, err);
+    return Quartz_Failure;
+  }
+
+  std::vector<float> pixels(source, source + (width * height * 4));
+  QTZ_ATTEMPT(InitHdr((uint32_t)width, (uint32_t)height, pixels));
+
+  free(source);
+
+  return Quartz_Success;
+}
+
+QuartzResult Texture::InitHdr(uint32_t width, uint32_t height, const std::vector<float>& pixels)
+{
+  OpalImageInitInfo info = {};
+  info.extent = OpalExtent{ (uint32_t)width, (uint32_t)height, 1 };
+  info.sampleType = Opal_Sample_Bilinear;
+  info.usage = Opal_Image_Usage_Uniform;
+  info.format = Opal_Format_RGBA32;
 
   QTZ_ATTEMPT_OPAL(OpalImageInit(&m_opalImage, info));
   QTZ_ATTEMPT_OPAL(OpalImageFill(m_opalImage, (void*)pixels.data()));
