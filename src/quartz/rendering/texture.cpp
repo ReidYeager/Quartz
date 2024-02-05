@@ -20,10 +20,17 @@
 namespace Quartz
 {
 
+QuartzResult Texture::Init()
+{
+  QTZ_ATTEMPT(InitOpalImage());
+
+  return Quartz_Success;
+}
+
 // Loaded
 // ============================================================
 
-QuartzResult Texture::Init(TextureFormat format, const char* path)
+QuartzResult Texture::Init(const char* path)
 {
   if (m_isValid)
   {
@@ -31,18 +38,10 @@ QuartzResult Texture::Init(TextureFormat format, const char* path)
     return Quartz_Success;
   }
 
-  if (format == Texture_RGB32 || format == Texture_RGB8)
-  {
-    QTZ_ERROR("RGBxx textures not supported for uniforms");
-    return Quartz_Failure;
-  }
-
-  m_format = format;
-
   int32_t width, height;
   void* pixels;
 
-  if (m_format == Texture_RGB8 || m_format == Texture_RGBA8)
+  if (format == Texture_Format_RGBA8)
   {
     QTZ_ATTEMPT(Load8BitImage(path, &width, &height, &pixels));
   }
@@ -51,7 +50,9 @@ QuartzResult Texture::Init(TextureFormat format, const char* path)
     QTZ_ATTEMPT(Load32BitImage(path, &width, &height, &pixels));
   }
 
-  QTZ_ATTEMPT(InitOpalImage((uint32_t)width, (uint32_t)height, pixels));
+  extents = Vec2U{ (uint32_t)width, (uint32_t)height };
+  QTZ_ATTEMPT(InitOpalImage());
+  QTZ_ATTEMPT(FillImage(pixels));
 
   free(pixels);
 
@@ -62,7 +63,7 @@ QuartzResult Texture::Load8BitImage(const char* path, int32_t* outWidth, int32_t
 {
   int width = 0, height = 0;
   int fileChannelCount;
-  int requestedChannelCount = (m_format == Texture_RGB8) ? STBI_rgb : STBI_rgb_alpha;
+  int requestedChannelCount = STBI_rgb_alpha;
   stbi_uc* source = stbi_load(path, &width, &height, &fileChannelCount, requestedChannelCount);
 
   if (width <= 0 || height <= 0 || source == nullptr)
@@ -84,12 +85,6 @@ QuartzResult Texture::Load8BitImage(const char* path, int32_t* outWidth, int32_t
 
 QuartzResult Texture::Load32BitImage(const char* path, int32_t* outWidth, int32_t* outHeight, void** outPixels)
 {
-  if (m_format == Texture_RGB32)
-  {
-    QTZ_ERROR("RGB32 texture loading not supported by tinyexr");
-    return Quartz_Failure;
-  }
-
   float* pixelData = nullptr;
   int width = 0, height = 0;
   const char* err;
@@ -110,7 +105,7 @@ QuartzResult Texture::Load32BitImage(const char* path, int32_t* outWidth, int32_
 // Assembled
 // ============================================================
 
-QuartzResult Texture::Init(TextureFormat format, uint32_t width, uint32_t height, const std::vector<Vec3>& pixels)
+QuartzResult Texture::Init(const std::vector<Vec3>& pixels)
 {
   if (m_isValid)
   {
@@ -118,40 +113,18 @@ QuartzResult Texture::Init(TextureFormat format, uint32_t width, uint32_t height
     return Quartz_Success;
   }
 
-  if (format == Texture_RGB32 || format == Texture_RGB8)
-  {
-    QTZ_ERROR("RGBxx textures not supported for uniforms");
-    return Quartz_Failure;
-  }
-
-  m_format = format;
-
   void* pixelData;
   std::vector<Vec4> pixelsRgba32;
   std::vector<unsigned char> pixels8Bit;
 
-  switch (m_format)
+  switch (format)
   {
-  case Quartz::Texture_RGB8:
+  case Quartz::Texture_Format_RGBA8:
   {
-    uint32_t count = width * height * 3;
+    uint32_t count = extents.width * extents.height * 4;
     pixels8Bit.resize(count);
 
-    for (uint32_t i = 0, channelIndex = 0; i < width * height; i++, channelIndex += 3)
-    {
-      pixels8Bit[channelIndex    ] = (uint8_t)(255 * PeriClamp(pixels[i].x, 0.0f, 1.0f));
-      pixels8Bit[channelIndex + 1] = (uint8_t)(255 * PeriClamp(pixels[i].y, 0.0f, 1.0f));
-      pixels8Bit[channelIndex + 2] = (uint8_t)(255 * PeriClamp(pixels[i].z, 0.0f, 1.0f));
-    }
-
-    pixelData = (void*)pixels8Bit.data();
-  } break;
-  case Quartz::Texture_RGBA8:
-  {
-    uint32_t count = width * height * 4;
-    pixels8Bit.resize(count);
-
-    for (uint32_t i = 0, channelIndex = 0; i < width * height; i++, channelIndex += 4)
+    for (uint32_t i = 0, channelIndex = 0; i < extents.width * extents.height; i++, channelIndex += 4)
     {
       pixels8Bit[channelIndex    ] = (uint8_t)(255 * PeriClamp(pixels[i].x, 0.0f, 1.0f));
       pixels8Bit[channelIndex + 1] = (uint8_t)(255 * PeriClamp(pixels[i].y, 0.0f, 1.0f));
@@ -161,29 +134,26 @@ QuartzResult Texture::Init(TextureFormat format, uint32_t width, uint32_t height
 
     pixelData = (void*)pixels8Bit.data();
   } break;
-  case Quartz::Texture_RGB32:
+  case Quartz::Texture_Format_RGBA32:
   {
     pixelsRgba32.resize(pixels.size());
 
-    for (uint32_t i = 0; i < width * height; i++)
+    for (uint32_t i = 0; i < extents.width * extents.height; i++)
     {
       pixelsRgba32[i] = Vec4{ pixels[i].x, pixels[i].y, pixels[i].z, 0.0f };
     }
 
     pixelData = (void*)pixelsRgba32.data();
   } break;
-  case Quartz::Texture_RGBA32:
-  {
-    pixelData = (void*)pixels.data();
-  } break;
   }
 
-  QTZ_ATTEMPT(InitOpalImage(width, height, pixelData));
+  QTZ_ATTEMPT(InitOpalImage());
+  QTZ_ATTEMPT(FillImage(pixelData));
 
   return Quartz_Success;
 }
 
-QuartzResult Texture::Init(TextureFormat format, uint32_t width, uint32_t height, const std::vector<Vec4>& pixels)
+QuartzResult Texture::Init(const std::vector<Vec4>& pixels)
 {
   if (m_isValid)
   {
@@ -191,40 +161,18 @@ QuartzResult Texture::Init(TextureFormat format, uint32_t width, uint32_t height
     return Quartz_Success;
   }
 
-  if (format == Texture_RGB32 || format == Texture_RGB8)
-  {
-    QTZ_ERROR("RGBxx textures not supported for uniforms");
-    return Quartz_Failure;
-  }
-
-  m_format = format;
-
   void* pixelData;
   std::vector<Vec3> pixelsRgb32;
   std::vector<unsigned char> pixels8Bit;
 
-  switch (m_format)
+  switch (format)
   {
-  case Quartz::Texture_RGB8:
+  case Quartz::Texture_Format_RGBA8:
   {
-    uint32_t count = width * height * 3;
+    uint32_t count = extents.width * extents.height * 4;
     pixels8Bit.resize(count);
 
-    for (uint32_t i = 0, channelIndex = 0; i < width * height; i++, channelIndex += 3)
-    {
-      pixels8Bit[channelIndex    ] = (uint8_t)(255 * PeriClamp(pixels[i].x, 0.0f, 1.0f));
-      pixels8Bit[channelIndex + 1] = (uint8_t)(255 * PeriClamp(pixels[i].y, 0.0f, 1.0f));
-      pixels8Bit[channelIndex + 2] = (uint8_t)(255 * PeriClamp(pixels[i].z, 0.0f, 1.0f));
-    }
-
-    pixelData = (void*)pixels8Bit.data();
-  } break;
-  case Quartz::Texture_RGBA8:
-  {
-    uint32_t count = width * height * 4;
-    pixels8Bit.resize(count);
-
-    for (uint32_t i = 0, channelIndex = 0; i < width * height; i++, channelIndex += 4)
+    for (uint32_t i = 0, channelIndex = 0; i < extents.width * extents.height; i++, channelIndex += 4)
     {
       pixels8Bit[channelIndex    ] = (uint8_t)(255 * PeriClamp(pixels[i].x, 0.0f, 1.0f));
       pixels8Bit[channelIndex + 1] = (uint8_t)(255 * PeriClamp(pixels[i].y, 0.0f, 1.0f));
@@ -234,24 +182,14 @@ QuartzResult Texture::Init(TextureFormat format, uint32_t width, uint32_t height
 
     pixelData = (void*)pixels8Bit.data();
   } break;
-  case Quartz::Texture_RGB32:
-  {
-    pixelsRgb32.resize(pixels.size());
-
-    for (uint32_t i = 0; i < width * height; i++)
-    {
-      pixelsRgb32[i] = Vec3{ pixels[i].x, pixels[i].y, pixels[i].z };
-    }
-
-    pixelData = (void*)pixelsRgb32.data();
-  } break;
-  case Quartz::Texture_RGBA32:
+  case Quartz::Texture_Format_RGBA32:
   {
     pixelData = (void*)pixels.data();
   } break;
   }
 
-  QTZ_ATTEMPT(InitOpalImage(width, height, pixelData));
+  QTZ_ATTEMPT(InitOpalImage());
+  QTZ_ATTEMPT(FillImage(pixelData));
 
   return Quartz_Success;
 }
@@ -259,42 +197,102 @@ QuartzResult Texture::Init(TextureFormat format, uint32_t width, uint32_t height
 // Opal
 // ============================================================
 
-QuartzResult Texture::InitOpalImage(uint32_t width, uint32_t height, void* pixels)
+QuartzResult Texture::Init(OpalImage opalImage)
+{
+  m_opalImage = opalImage;
+
+  m_isValid = true;
+  return Quartz_Success;
+}
+
+QuartzResult Texture::InitOpalImage()
 {
   OpalImageInitInfo info = {};
-  info.extent = OpalExtent{ width, height, 1 };
-  info.sampleType = Opal_Sample_Bilinear;
-  info.usage = Opal_Image_Usage_Uniform;
-  info.mipLevels = (uint32_t)floor(log2((double)PeriMax(width, height)));
+  info.extent = OpalExtent{ extents.width, extents.height, 1 };
 
-  switch (m_format)
+  if (mipLevels == 0)
   {
-  case Quartz::Texture_RGB8:   info.format = Opal_Format_RGB8;   break;
-  case Quartz::Texture_RGBA8:  info.format = Opal_Format_RGBA8;  break;
-  case Quartz::Texture_RGB32:  info.format = Opal_Format_RGB32;  break;
-  case Quartz::Texture_RGBA32: info.format = Opal_Format_RGBA32; break;
+    mipLevels = (uint32_t)floor(log2((double)PeriMax(extents.width, extents.height)));
+  }
+  info.mipLevels = mipLevels;
+
+  info.usage |= ((usage & Texture_Usage_Shader_Input) != 0) * Opal_Image_Usage_Uniform;
+  info.usage |= ((usage & Texture_Usage_Framebuffer) != 0) * (format == Texture_Format_Depth ? Opal_Image_Usage_Depth : Opal_Image_Usage_Color);
+
+  switch (format)
+  {
+  case Quartz::Texture_Format_RGBA8:  info.format = Opal_Format_RGBA8;  break;
+  case Quartz::Texture_Format_RGBA32: info.format = Opal_Format_RGBA32; break;
+  case Quartz::Texture_Format_Depth:  info.format = Opal_Format_D24_S8; break;
+  }
+
+  switch (filtering)
+  {
+  case Quartz::Texture_Filter_Linear: info.filterType = Opal_Image_Filter_Bilinear; break;
+  case Quartz::Texture_Filter_Nearest: info.filterType = Opal_Image_Filter_Point; break;
+  }
+
+  switch (sampleMode)
+  {
+  case Quartz::Texture_Sample_Wrap: info.sampleMode = Opal_Image_Sample_Wrap; break;
+  case Quartz::Texture_Sample_Clamp: info.sampleMode = Opal_Image_Sample_Clamp; break;
+  case Quartz::Texture_Sample_Reflect: info.sampleMode = Opal_Image_Sample_Reflect; break;
   }
 
   QTZ_ATTEMPT_OPAL(OpalImageInit(&m_opalImage, info));
-  QTZ_ATTEMPT_OPAL(OpalImageFill(m_opalImage, pixels));
 
-  OpalInputValue inValue = {};
-  inValue.image = m_opalImage;
+  if (usage & Texture_Usage_Shader_Input)
+  {
+    OpalInputValue inValue = {};
+    inValue.image = m_opalImage;
 
-  OpalInputSetInitInfo setInfo = {};
-  setInfo.layout = g_coreState.renderer.GetSingleImageLayout();
-  setInfo.pInputValues = &inValue;
+    OpalInputSetInitInfo setInfo = {};
+    setInfo.layout = g_coreState.renderer.GetSingleImageLayout();
+    setInfo.pInputValues = &inValue;
 
-  QTZ_ATTEMPT_OPAL(OpalInputSetInit(&m_inputSet, setInfo));
+    QTZ_ATTEMPT_OPAL(OpalInputSetInit(&m_inputSet, setInfo));
 
-  OpalInputInfo imageInput = {};
-  imageInput.type = Opal_Input_Type_Samped_Image;
-  imageInput.value.image = m_opalImage;
-  imageInput.index = 0;
+    OpalInputInfo imageInput = {};
+    imageInput.type = Opal_Input_Type_Samped_Image;
+    imageInput.value.image = m_opalImage;
+    imageInput.index = 0;
 
-  QTZ_ATTEMPT_OPAL(OpalInputSetUpdate(m_inputSet, 1, &imageInput));
+    QTZ_ATTEMPT_OPAL(OpalInputSetUpdate(m_inputSet, 1, &imageInput));
+  }
 
   m_isValid = true;
+  return Quartz_Success;
+}
+
+QuartzResult Texture::FillImage(void* pixels)
+{
+  if (usage & Texture_Usage_Framebuffer)
+  {
+    QTZ_ERROR("Can not manually fill a framebuffer texture");
+    return Quartz_Failure;
+  }
+
+  QTZ_ATTEMPT_OPAL(OpalImageFill(m_opalImage, pixels));
+
+  return Quartz_Success;
+}
+
+// Other
+// ============================================================
+
+QuartzResult Texture::Resize(Vec2U newExtents)
+{
+  if (!m_isValid)
+  {
+    QTZ_ERROR("Attempting to resize an invalid texture");
+    return Quartz_Failure;
+  }
+
+  OpalExtent e = OpalExtent{ newExtents.width, newExtents.height, 1 };
+  QTZ_ATTEMPT_OPAL(OpalImageResize(m_opalImage, e));
+
+  extents = newExtents;
+
   return Quartz_Success;
 }
 

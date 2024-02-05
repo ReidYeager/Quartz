@@ -117,8 +117,8 @@ private:
   Window* m_qWindow;
 
   OpalWindow m_window;
-  OpalImage m_windowBufferImage;
-  OpalImage m_depthImage;
+  Texture m_windowBufferTexture;
+  Texture m_depthTexture;
 
   OpalRenderpass m_renderpass;
   OpalFramebuffer m_framebuffer;

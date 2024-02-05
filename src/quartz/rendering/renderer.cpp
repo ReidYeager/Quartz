@@ -77,18 +77,19 @@ QuartzResult Renderer::Init(Window* window)
 
   QTZ_ATTEMPT_OPAL(OpalInit(opalInfo));
   QTZ_ATTEMPT_OPAL(OpalWindowInit(&m_window, windowInfo));
-  OpalWindowGetBufferImage(m_window, &m_windowBufferImage);
+  OpalImage windowBufferImage;
+  OpalWindowGetBufferImage(m_window, &windowBufferImage);
+  m_windowBufferTexture.Init(windowBufferImage);
 
   // ==============================
   // Depth image
   // ==============================
 
-  OpalImageInitInfo depthImageInfo {};
-  depthImageInfo.extent = m_window->extents;
-  depthImageInfo.format = Opal_Format_D24_S8;
-  depthImageInfo.sampleType = Opal_Sample_Bilinear;
-  depthImageInfo.usage = Opal_Image_Usage_Depth;
-  QTZ_ATTEMPT_OPAL(OpalImageInit(&m_depthImage, depthImageInfo));
+  m_depthTexture.extents = Vec2U{ m_window->extents.width, m_window->extents.height };
+  m_depthTexture.filtering = Quartz::Texture_Filter_Linear;
+  m_depthTexture.usage = Quartz::Texture_Usage_Framebuffer;
+  m_depthTexture.format = Quartz::Texture_Format_Depth;
+  m_depthTexture.Init();
 
   // ==============================
   // Renderpass
@@ -131,7 +132,7 @@ QuartzResult Renderer::Init(Window* window)
   // Framebuffer
   // ==============================
 
-  OpalImage framebufferImages[attachmentCount] = { m_windowBufferImage, m_depthImage };
+  OpalImage framebufferImages[attachmentCount] = { m_windowBufferTexture.m_opalImage, m_depthTexture.m_opalImage };
 
   OpalFramebufferInitInfo framebufferInfo;
   framebufferInfo.imageCount = attachmentCount;
@@ -331,7 +332,7 @@ void Renderer::Shutdown()
 
   OpalFramebufferShutdown(&m_framebuffer);
   OpalRenderpassShutdown(&m_renderpass);
-  OpalImageShutdown(&m_depthImage);
+  m_depthTexture.Shutdown();
   OpalWindowShutdown(&m_window);
   OpalShutdown();
 }
@@ -352,7 +353,8 @@ QuartzResult Renderer::Resize(uint32_t width, uint32_t height)
     else
       return Quartz_Failure;
   }
-  QTZ_ATTEMPT_OPAL(OpalImageResize(m_depthImage, m_window->extents));
+
+  QTZ_ATTEMPT(m_depthTexture.Resize(Vec2U{ m_window->extents.width, m_window->extents.height }));
   QTZ_ATTEMPT_OPAL(OpalFramebufferReinit(m_framebuffer));
   QTZ_ATTEMPT_OPAL(OpalFramebufferReinit(m_imguiFramebuffer));
 
