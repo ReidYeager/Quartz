@@ -102,24 +102,24 @@ QuartzResult Material::InitInputs(const std::vector<MaterialInput>& inputs)
     {
     case Input_Texture:
     {
-      if (!inputs[i].value.texture.IsValid())
+      if (!inputs[i].value.texture->IsValid())
       {
         QTZ_ERROR("Attempting to use an invalid texture as material input {}", i);
         return Quartz_Failure;
       }
 
-      values[i].image = inputs[i].value.texture.m_opalImage;
+      values[i].image = inputs[i].value.texture->m_opalImage;
       infos[i].type = Opal_Input_Type_Samped_Image;
     } break;
     case Input_Buffer:
     {
-      if (!inputs[i].value.buffer.IsValid())
+      if (!inputs[i].value.buffer->IsValid())
       {
         QTZ_ERROR("Attempting to use an invalid buffer as material input {}", i);
         return Quartz_Failure;
       }
 
-      values[i].buffer = inputs[i].value.buffer.m_opalBuffer;
+      values[i].buffer = inputs[i].value.buffer->m_opalBuffer;
       infos[i].type = Opal_Input_Type_Uniform_Buffer;
     } break;
     default: return Quartz_Failure;

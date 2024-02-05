@@ -18,8 +18,8 @@ enum MaterialInputType
 
 union MaterialInputValue
 {
-  Texture texture;
-  Buffer buffer;
+  Texture* texture;
+  Buffer* buffer;
 };
 
 struct MaterialInput

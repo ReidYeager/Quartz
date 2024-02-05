@@ -8,31 +8,72 @@
 namespace Quartz
 {
 
-class Texture
+enum TextureFormat
+{
+  Texture_RGB8,
+  Texture_RGBA8,
+  Texture_RGB32,
+  Texture_RGBA32,
+};
+
+class Image
 {
   friend class Renderer;
   friend class Material;
 
+protected:
+  OpalImage m_opalImage = OPAL_NULL_HANDLE;
+  OpalInputSet m_inputSet = OPAL_NULL_HANDLE;
+  bool m_isValid = false;
+
 public:
-  Texture() : m_isValid(false) {}
-  Texture(const char* path, bool isExr = false);
+  virtual ~Image() = default;
 
-  QuartzResult Init(const char* path);
-  QuartzResult Init(uint32_t width, uint32_t height, const std::vector<Vec3>& pixels);
-  QuartzResult Init(uint32_t width, uint32_t height, const std::vector<Vec4>& pixels);
-  QuartzResult Init(uint32_t width, uint32_t height, const std::vector<unsigned char>& pixels);
+  virtual void Shutdown()
+  {
+    if (!m_isValid)
+    {
+      return;
+    }
+    m_isValid = false;
+    OpalImageShutdown(&m_opalImage);
+    OpalInputSetShutdown(&m_inputSet);
+  }
 
-  QuartzResult InitExr(const char* path);
-  QuartzResult InitHdr(uint32_t width, uint32_t height, const std::vector<float>& pixels);
+  inline bool IsValid() const
+  {
+    return m_isValid;
+  }
 
-  void Shutdown();
-  void* ForImgui();
-  inline bool IsValid() const { return m_isValid; }
+  inline void* ForImgui() const
+  {
+    if (!m_isValid)
+    {
+      QTZ_ERROR("Attempting to use invalid image for imgui");
+      return nullptr;
+    }
+    return (void*)&m_inputSet->vk.descriptorSet;
+  }
 
 private:
-  bool m_isValid = false;
-  OpalImage m_opalImage;
-  OpalInputSet m_imguiSet;
+  inline OpalImage GetOpalImage() const { return m_opalImage; };
+  inline OpalInputSet GetInputSet() const { return m_inputSet; }
+};
+
+class Texture : public Image
+{
+private:
+  TextureFormat m_format;
+
+public:
+  QuartzResult Init(TextureFormat format, const char* path);
+  QuartzResult Init(TextureFormat format, uint32_t width, uint32_t height, const std::vector<Vec3>& pixels);
+  QuartzResult Init(TextureFormat format, uint32_t width, uint32_t height, const std::vector<Vec4>& pixels);
+
+private:
+  QuartzResult Load8BitImage(const char* path, int32_t* outWidth, int32_t* outHeight, void** outPixels);
+  QuartzResult Load32BitImage(const char* path, int32_t* outWidth, int32_t* outHeight, void** outPixels);
+  QuartzResult InitOpalImage(uint32_t width, uint32_t height, void* pixels);
 };
 
 } // namespace Quartz
