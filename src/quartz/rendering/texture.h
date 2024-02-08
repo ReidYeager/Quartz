@@ -40,6 +40,7 @@ class Texture : public Image
 {
 friend class Renderer;
 friend class Material;
+friend void SetHdri(Quartz::Texture& image);
 
 public:
   TextureFormat format = Texture_Format_RGBA8;

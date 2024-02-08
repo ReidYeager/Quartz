@@ -13,6 +13,7 @@ namespace Quartz
 class Mesh
 {
 friend class Renderer;
+friend QuartzResult ConvolveHdri();
 
 public:
   Mesh() : m_isValid(false) {}

@@ -270,7 +270,7 @@ QuartzResult Renderer::InitImgui()
 
 QuartzResult Renderer::StartFrame()
 {
-  OpalResult result = OpalRenderBegin(m_window);
+  OpalResult result = OpalRenderBeginWindow(m_window);
   if (result != Opal_Success)
   {
     if (result == Opal_Window_Minimized)
@@ -284,7 +284,7 @@ QuartzResult Renderer::StartFrame()
 
 QuartzResult Renderer::EndFrame()
 {
-  QTZ_ATTEMPT_OPAL(OpalRenderEnd());
+  QTZ_ATTEMPT_OPAL(OpalRenderEndWindow());
   return Quartz_Success;
 }
 

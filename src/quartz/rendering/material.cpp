@@ -34,7 +34,10 @@ QuartzResult Material::Init(const std::vector<std::string>& shaderPaths, const s
     m_shaderPaths[i] = std::string(shaderPaths[i]);
   }
 
-  m_renderpass = g_coreState.renderer.GetRenderpass();
+  if (m_renderpass == OPAL_NULL_HANDLE)
+  {
+    m_renderpass = g_coreState.renderer.GetRenderpass();
+  }
   m_inputs = std::vector<MaterialInput>(inputs);
 
   m_isValid = true;
@@ -177,7 +180,14 @@ QuartzResult Material::InitMaterial()
   };
 
   OpalMaterialInitInfo materialInfo;
-  materialInfo.renderpass = g_coreState.renderer.GetRenderpass();
+  if (m_renderpass == OPAL_NULL_HANDLE)
+  {
+    materialInfo.renderpass = g_coreState.renderer.GetRenderpass();
+  }
+  else
+  {
+    materialInfo.renderpass = m_renderpass;
+  }
   materialInfo.subpassIndex = 0;
   materialInfo.inputLayoutCount = layoutCount;
   materialInfo.pInputLayouts = layouts;

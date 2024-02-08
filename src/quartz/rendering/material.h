@@ -47,6 +47,7 @@ class Material
 {
 friend class Renderer;
 friend class MaterialInstance;
+friend QuartzResult ConvolveHdri();
 
 public:
   Material() : m_isValid(false), m_isBase(true) {}

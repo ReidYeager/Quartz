@@ -87,6 +87,155 @@ QuartzResult InitRenderer()
   return Quartz_Success;
 }
 
+Quartz::Texture hdri;
+Quartz::Texture dumped;
+
+void SetHdri(Quartz::Texture& image)
+{
+  hdri = image;
+}
+
+Quartz::Texture& GetConvolvedHdri()
+{
+  return dumped;
+}
+
+QuartzResult ConvolveHdri()
+{
+  if (!hdri.IsValid())
+  {
+    QTZ_ERROR("HDRI is not a valid texture");
+    return Quartz_Failure;
+  }
+
+  OpalImage convolutionImage;
+  OpalRenderpass convolutionRp;
+  OpalFramebuffer convolutionFb;
+
+  // Image
+
+  OpalImageInitInfo imageInfo = {};
+  float extentsRatio = hdri.extents.width / hdri.extents.height;
+  imageInfo.extent.height = 256;
+  imageInfo.extent.width = (uint32_t)((float)imageInfo.extent.height * extentsRatio);
+  imageInfo.extent.depth = 1;
+  imageInfo.filterType = Opal_Image_Filter_Bilinear;
+  imageInfo.format = Opal_Format_RGBA32;
+  imageInfo.mipLevels = 1;
+  imageInfo.sampleMode = Opal_Image_Sample_Clamp;
+  imageInfo.usage = Opal_Image_Usage_Color | Opal_Image_Usage_Copy_Src;
+  QTZ_ATTEMPT_OPAL(OpalImageInit(&convolutionImage, imageInfo));
+
+  // Renderpass
+
+  const uint32_t attachmentCount = 1;
+  OpalAttachmentInfo attachment = {};
+  attachment.clearValue.color = OpalColorValue{ 1.0f, 0.0f, 1.0f, 1.0f };
+  attachment.format = Opal_Format_RGBA32;
+  attachment.loadOp = Opal_Attachment_Op_Clear;
+  attachment.shouldStore = true;
+  attachment.usage = Opal_Attachment_Usage_Color;
+
+  uint32_t zeroIndex = 0;
+  OpalSubpassInfo subpass;
+  subpass.depthAttachmentIndex = OPAL_DEPTH_ATTACHMENT_NONE;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachmentIndices = &zeroIndex;
+  subpass.inputAttachmentCount = 0;
+  subpass.pInputColorAttachmentIndices = nullptr;
+
+  OpalRenderpassInitInfo renderpassInfo = {};
+  renderpassInfo.dependencyCount = 0;
+  renderpassInfo.pDependencies = nullptr;
+  renderpassInfo.imageCount = attachmentCount;
+  renderpassInfo.pAttachments = &attachment;
+  renderpassInfo.subpassCount = 1;
+  renderpassInfo.pSubpasses = &subpass;
+
+  QTZ_ATTEMPT_OPAL(OpalRenderpassInit(&convolutionRp, renderpassInfo));
+
+  // Framebuffer
+
+  OpalImage framebufferImages[attachmentCount] = { convolutionImage };
+
+  OpalFramebufferInitInfo framebufferInfo;
+  framebufferInfo.imageCount = attachmentCount;
+  framebufferInfo.pImages = framebufferImages;
+  framebufferInfo.renderpass = convolutionRp;
+
+  QTZ_ATTEMPT_OPAL(OpalFramebufferInit(&convolutionFb, framebufferInfo));
+
+  // Mesh
+
+  std::vector<Vertex> vertices(4);
+  vertices[0].position = Vec3{ -1.0f, -1.0f, 1.0f }; // TL
+  vertices[0].uv = Vec2{ 0.0f, 0.0f };
+  vertices[1].position = Vec3{  1.0f, -1.0f, 1.0f }; // TR
+  vertices[1].uv = Vec2{ 1.0f, 0.0f };
+  vertices[2].position = Vec3{ -1.0f,  1.0f, 1.0f }; // BL
+  vertices[2].uv = Vec2{ 0.0f, 1.0f };
+  vertices[3].position = Vec3{  1.0f,  1.0f, 1.0f }; // BR
+  vertices[3].uv = Vec2{ 1.0f, 1.0f };
+
+  std::vector<uint32_t> indices = {
+    0, 1, 2,
+    2, 3, 1
+  };
+
+  Mesh mesh;
+  QTZ_ATTEMPT(mesh.Init(vertices, indices));
+
+  // Material
+
+  Material mat;
+  mat.m_renderpass = convolutionRp;
+  QTZ_ATTEMPT(mat.Init(
+    {
+      "D:/Dev/QuartzSandbox/res/shaders/compiled/t_convolution.vert.spv",
+      "D:/Dev/QuartzSandbox/res/shaders/compiled/t_convolution.frag.spv"
+    },
+    {
+      {.type = Quartz::Input_Texture, .value = {.texture = &hdri } }
+    },
+    Quartz::Pipeline_Cull_None));
+
+  // Render
+
+  QTZ_ATTEMPT_OPAL(OpalRenderBeginSingle());
+
+  OpalRenderBeginRenderpass(convolutionRp, convolutionFb);
+  QTZ_ATTEMPT(mat.Bind());
+  mesh.Render();
+  OpalRenderEndRenderpass(convolutionRp);
+
+  QTZ_ATTEMPT_OPAL(OpalRenderEndSingle());
+
+  // Dump
+
+  void* imageData;
+  uint32_t imageSize = OpalImageDumpData(convolutionImage, &imageData);
+
+  dumped.extents = Vec2U{ imageInfo.extent.width, imageInfo.extent.height };
+  dumped.filtering = Quartz::Texture_Filter_Linear;
+  dumped.format = Quartz::Texture_Format_RGBA32;
+  dumped.mipLevels = 1;
+  dumped.sampleMode = Texture_Sample_Clamp;
+  dumped.usage = Texture_Usage_Shader_Input;
+
+  Vec4* pixelData = (Vec4*)imageData;
+  std::vector<Vec4> pixels(pixelData, pixelData + (imageSize / sizeof(Vec4)));
+
+  QTZ_ATTEMPT(dumped.Init(pixels));
+
+  mat.Shutdown();
+  mesh.Shutdown();
+  OpalRenderpassShutdown(&convolutionRp);
+  OpalFramebufferShutdown(&convolutionFb);
+  OpalImageShutdown(&convolutionImage);
+
+  return Quartz_Success;
+}
+
 // Engine
 // ============================================================
 

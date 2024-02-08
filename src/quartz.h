@@ -23,6 +23,10 @@ double Time();      // Total real time
 uint32_t WindowWidth();
 uint32_t WindowHeight();
 
+void SetHdri(Quartz::Texture& image);
+QuartzResult ConvolveHdri();
+Quartz::Texture& GetConvolvedHdri();
+
 } // namespace Quartz
 
 // Entry point
