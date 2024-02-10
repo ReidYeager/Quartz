@@ -105,6 +105,14 @@ QuartzResult Texture::Load32BitImage(const char* path, int32_t* outWidth, int32_
 // Assembled
 // ============================================================
 
+QuartzResult Texture::Init(const void* pixels)
+{
+  QTZ_ATTEMPT(InitOpalImage());
+  QTZ_ATTEMPT(FillImage(pixels));
+
+  return Quartz_Success;
+}
+
 QuartzResult Texture::Init(const std::vector<Vec3>& pixels)
 {
   if (m_isValid)
@@ -221,6 +229,7 @@ QuartzResult Texture::InitOpalImage()
 
   switch (format)
   {
+  case Quartz::Texture_Format_RG16:   info.format = Opal_Format_RG16;   break;
   case Quartz::Texture_Format_RGBA8:  info.format = Opal_Format_RGBA8;  break;
   case Quartz::Texture_Format_RGBA32: info.format = Opal_Format_RGBA32; break;
   case Quartz::Texture_Format_Depth:  info.format = Opal_Format_D24_S8; break;
@@ -264,7 +273,7 @@ QuartzResult Texture::InitOpalImage()
   return Quartz_Success;
 }
 
-QuartzResult Texture::FillImage(void* pixels)
+QuartzResult Texture::FillImage(const void* pixels)
 {
   if (usage & Texture_Usage_Framebuffer)
   {

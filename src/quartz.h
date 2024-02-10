@@ -27,6 +27,7 @@ void SetHdri(Texture& image);
 QuartzResult ConvolveHdri();
 Texture& GetDiffuseHdri();
 Texture& GetSpecularHdri();
+Texture& GetSpecularBrdf();
 
 } // namespace Quartz
 

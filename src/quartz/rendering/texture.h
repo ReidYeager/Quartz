@@ -24,6 +24,7 @@ enum TextureFilterMode
 
 enum TextureFormat
 {
+  Texture_Format_RG16,
   Texture_Format_RGBA8,
   Texture_Format_RGBA32,
   Texture_Format_Depth,
@@ -53,6 +54,7 @@ public:
 public:
   QuartzResult Init();
   QuartzResult Init(const char* path);
+  QuartzResult Init(const void* pixels);
   QuartzResult Init(const std::vector<Vec3>& pixels);
   QuartzResult Init(const std::vector<Vec4>& pixels);
 
@@ -64,7 +66,7 @@ private:
   QuartzResult Load8BitImage(const char* path, int32_t* outWidth, int32_t* outHeight, void** outPixels);
   QuartzResult Load32BitImage(const char* path, int32_t* outWidth, int32_t* outHeight, void** outPixels);
   QuartzResult InitOpalImage();
-  QuartzResult FillImage(void* pixels);
+  QuartzResult FillImage(const void* pixels);
 };
 
 } // namespace Quartz

@@ -35,6 +35,7 @@ QuartzResult InitRenderer();
 //QuartzResult ConvolveHdri();  <-- Defined in quartz.h (Temporary function during Hdri convolution learning)
 //Texture& GetDiffuseHdri();    <-- Defined in quartz.h (Temporary function during Hdri convolution learning)
 //Texture& GetSpecularHdri();   <-- Defined in quartz.h (Temporary function during Hdri convolution learning)
+//Texture& GetSpecularBrdf();   <-- Defined in quartz.h (Temporary function during Hdri convolution learning)
 // Engine
 QuartzResult InitEcs();
 void InitClocks();
@@ -94,6 +95,7 @@ QuartzResult InitRenderer()
 Quartz::Texture hdri;
 Quartz::Texture dumpedDiffuse;
 Quartz::Texture dumpedSpecular;
+Quartz::Texture dumpedBrdf;
 
 void SetHdri(Texture& image)
 {
@@ -110,6 +112,11 @@ Texture& GetSpecularHdri()
   return dumpedSpecular;
 }
 
+Texture& GetSpecularBrdf()
+{
+  return dumpedBrdf;
+}
+
 QuartzResult ConvolveHdri()
 {
   if (!hdri.IsValid())
@@ -120,9 +127,12 @@ QuartzResult ConvolveHdri()
 
   OpalImage diffuseConvolutionImage;
   OpalImage specularConvolutionImage;
+  OpalImage specularBrdfImage;
   OpalRenderpass convolutionRp;
+  OpalRenderpass brdfRenderpass;
   const uint8_t specMipCount = 5;
   const uint32_t specMaxHeight = 256;
+  const uint32_t brdfSize = 512;
   Buffer dummybuffer;
   dummybuffer.Init(1);
 
@@ -161,6 +171,17 @@ QuartzResult ConvolveHdri()
   specularImageInfo.sampleMode = Opal_Image_Sample_Clamp;
   specularImageInfo.usage = Opal_Image_Usage_Color | Opal_Image_Usage_Copy_Src;
   QTZ_ATTEMPT_OPAL(OpalImageInit(&specularConvolutionImage, specularImageInfo));
+  // Specular brdf
+  OpalImageInitInfo brdfImageInfo = {};
+  brdfImageInfo.extent.height = brdfSize;
+  brdfImageInfo.extent.width = brdfSize;
+  brdfImageInfo.extent.depth = 1;
+  brdfImageInfo.filterType = Opal_Image_Filter_Bilinear;
+  brdfImageInfo.format = Opal_Format_RG16;
+  brdfImageInfo.mipLevels = 1;
+  brdfImageInfo.sampleMode = Opal_Image_Sample_Clamp;
+  brdfImageInfo.usage = Opal_Image_Usage_Color | Opal_Image_Usage_Copy_Src;
+  QTZ_ATTEMPT_OPAL(OpalImageInit(&specularBrdfImage, brdfImageInfo));
 
   // Renderpass
 
@@ -190,11 +211,12 @@ QuartzResult ConvolveHdri()
 
   QTZ_ATTEMPT_OPAL(OpalRenderpassInit(&convolutionRp, renderpassInfo));
 
+  attachments[0].format = Opal_Format_RG16;
+  QTZ_ATTEMPT_OPAL(OpalRenderpassInit(&brdfRenderpass, renderpassInfo));
+
   // Framebuffer
 
   OpalFramebuffer convolutionFb;
-
-  OpalImage framebufferImages[1] = { diffuseConvolutionImage };
 
   OpalFramebufferInitInfo framebufferInfo;
   framebufferInfo.imageCount = 1;
@@ -202,6 +224,11 @@ QuartzResult ConvolveHdri()
   framebufferInfo.renderpass = convolutionRp;
 
   QTZ_ATTEMPT_OPAL(OpalFramebufferInit(&convolutionFb, framebufferInfo));
+
+  OpalFramebuffer brdfFramebuffer;
+  framebufferInfo.pImages = &specularBrdfImage;
+  framebufferInfo.renderpass = brdfRenderpass;
+  QTZ_ATTEMPT_OPAL(OpalFramebufferInit(&brdfFramebuffer, framebufferInfo));
 
   // Mesh
 
@@ -248,6 +275,16 @@ QuartzResult ConvolveHdri()
       { .type = Quartz::Input_Texture, .value = { .texture = &hdri } },
       { .type = Quartz::Input_Buffer, .value = { .buffer = &dummybuffer } }
     },
+    Quartz::Pipeline_Cull_None));
+
+  Material matBrdf;
+  matBrdf.m_renderpass = brdfRenderpass;
+  QTZ_ATTEMPT(matBrdf.Init(
+    {
+      "D:/Dev/QuartzSandbox/res/shaders/compiled/t_convolution.vert.spv",
+      "D:/Dev/QuartzSandbox/res/shaders/compiled/t_convolutionBrdf.frag.spv"
+    },
+    { },
     Quartz::Pipeline_Cull_None));
 
   // Specular mips
@@ -361,6 +398,33 @@ QuartzResult ConvolveHdri()
     vkCmdEndRenderPass(oState.vk.currentCommandBuffer);
   }
 
+  // Brdf
+  beginInfo.renderPass = brdfRenderpass->vk.renderpass;
+  beginInfo.framebuffer = brdfFramebuffer->vk.framebuffer;
+  beginInfo.renderArea.extent = VkExtent2D{ brdfSize, brdfSize };
+  vkCmdBeginRenderPass(oState.vk.currentCommandBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+  QTZ_ATTEMPT(matBrdf.Bind());
+
+  VkViewport viewport = { 0, 0, 1, 1, 0, 1 };
+  viewport.x = 0;
+  viewport.y = 0;
+  viewport.width = brdfSize;
+  viewport.height = brdfSize;
+  viewport.minDepth = 0;
+  viewport.maxDepth = 1;
+
+  VkRect2D scissor = { 0 };
+  scissor.extent = VkExtent2D{ brdfSize, brdfSize };
+  scissor.offset = VkOffset2D{ 0, 0 };
+
+  vkCmdSetViewport(oState.vk.currentCommandBuffer, 0, 1, &viewport);
+  vkCmdSetScissor(oState.vk.currentCommandBuffer, 0, 1, &scissor);
+
+  mesh.Render();
+
+  vkCmdEndRenderPass(oState.vk.currentCommandBuffer);
+
   QTZ_ATTEMPT_OPAL(OpalRenderEndSingle());
 
   // Dump
@@ -397,14 +461,32 @@ QuartzResult ConvolveHdri()
   QTZ_ATTEMPT(dumpedSpecular.Init(pixelsSpecular));
   free(imageData);
 
+  // Brdf
+  dumpedBrdf.extents = Vec2U{ brdfSize, brdfSize };
+  dumpedBrdf.filtering = Texture_Filter_Linear;
+  dumpedBrdf.format = Texture_Format_RG16;
+  dumpedBrdf.mipLevels = 1;
+  dumpedBrdf.sampleMode = Texture_Sample_Clamp;
+  dumpedBrdf.usage = Texture_Usage_Shader_Input;
+
+  imageSize = OpalImageDumpData(specularBrdfImage, &imageData);
+  QTZ_ATTEMPT(dumpedBrdf.Init(imageData));
+  free(imageData);
+
+  // Shutdown
+
   matDiffuse.Shutdown();
   matSpecular.Shutdown();
+  matBrdf.Shutdown();
   mesh.Shutdown();
   dummybuffer.Shutdown();
   OpalRenderpassShutdown(&convolutionRp);
+  OpalRenderpassShutdown(&brdfRenderpass);
   OpalFramebufferShutdown(&convolutionFb);
+  OpalFramebufferShutdown(&brdfFramebuffer);
   OpalImageShutdown(&diffuseConvolutionImage);
   OpalImageShutdown(&specularConvolutionImage);
+  OpalImageShutdown(&specularBrdfImage);
 
   for (uint32_t i = 0; i < specMipCount; i++)
   {
