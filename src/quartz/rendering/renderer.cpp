@@ -89,6 +89,7 @@ QuartzResult Renderer::Init(Window* window)
   m_depthTexture.filtering = Quartz::Texture_Filter_Linear;
   m_depthTexture.usage = Quartz::Texture_Usage_Framebuffer;
   m_depthTexture.format = Quartz::Texture_Format_Depth;
+  m_depthTexture.mipLevels = 1;
   m_depthTexture.Init();
 
   // ==============================

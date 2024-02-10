@@ -35,7 +35,7 @@ struct WindowPlatformInfo
 typedef void(*InputCallbackFunction_T)();
 
 #include "quartz/platform/window/window.inl"
-s
+
 #endif // QTZ_PLATFORM_WIN32
 
-}
+} // namespace Quartz
