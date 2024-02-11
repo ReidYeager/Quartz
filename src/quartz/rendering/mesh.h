@@ -13,6 +13,7 @@ namespace Quartz
 class Mesh
 {
 friend class Renderer;
+friend class TextureSkybox;
 friend QuartzResult ConvolveHdri();
 
 public:

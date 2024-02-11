@@ -18,8 +18,8 @@ enum MaterialInputType
 
 union MaterialInputValue
 {
-  Texture* texture;
-  Buffer* buffer;
+  const Texture* texture;
+  const Buffer* buffer;
 };
 
 struct MaterialInput
@@ -47,6 +47,7 @@ class Material
 {
 friend class Renderer;
 friend class MaterialInstance;
+friend class TextureSkybox;
 friend QuartzResult ConvolveHdri();
 
 public:

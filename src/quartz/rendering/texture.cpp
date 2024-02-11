@@ -209,6 +209,25 @@ QuartzResult Texture::Init(OpalImage opalImage)
 {
   m_opalImage = opalImage;
 
+  if (usage & Texture_Usage_Shader_Input)
+  {
+    OpalInputValue inValue = {};
+    inValue.image = m_opalImage;
+
+    OpalInputSetInitInfo setInfo = {};
+    setInfo.layout = g_coreState.renderer.GetSingleImageLayout();
+    setInfo.pInputValues = &inValue;
+
+    QTZ_ATTEMPT_OPAL(OpalInputSetInit(&m_inputSet, setInfo));
+
+    OpalInputInfo imageInput = {};
+    imageInput.type = Opal_Input_Type_Samped_Image;
+    imageInput.value.image = m_opalImage;
+    imageInput.index = 0;
+
+    QTZ_ATTEMPT_OPAL(OpalInputSetUpdate(m_inputSet, 1, &imageInput));
+  }
+
   m_isValid = true;
   return Quartz_Success;
 }
