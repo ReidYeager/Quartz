@@ -81,6 +81,7 @@ public:
 
   // TODO:
   QuartzResult Resize(Vec2U newExtents);
+  QuartzResult FillImage(const void* pixels);
 
   void Shutdown()
   {
@@ -118,7 +119,6 @@ private:
   QuartzResult Load8BitImage(const char* path, int32_t* outWidth, int32_t* outHeight, void** outPixels);
   QuartzResult Load32BitImage(const char* path, int32_t* outWidth, int32_t* outHeight, void** outPixels);
   QuartzResult InitOpalImage();
-  QuartzResult FillImage(const void* pixels);
 };
 
 class TextureSkybox
