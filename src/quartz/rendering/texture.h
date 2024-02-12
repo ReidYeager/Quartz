@@ -58,7 +58,7 @@ friend class TextureSkybox;
 
 public:
   TextureFormat     format     = Texture_Format_RGBA8;
-  TextureUsageFlags usage      = 0;
+  TextureUsageFlags usage      = Texture_Usage_Shader_Input;
   TextureFilterMode filtering  = Texture_Filter_Linear;
   TextureSampleMode sampleMode = Texture_Sample_Wrap;
   uint32_t          mipLevels  = 0;
@@ -108,8 +108,10 @@ public:
       QTZ_ERROR("Attempting to use invalid image for imgui");
       return nullptr;
     }
-    return (void*)&m_inputSet->vk.descriptorSet;
+    return (void*)m_inputSet->vk.descriptorSet;
   }
+
+  uint64_t Dump_Debug(void** outData) const;
 
 private:
   QuartzResult Init(OpalImage opalImage);

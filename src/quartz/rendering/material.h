@@ -10,6 +10,12 @@
 namespace Quartz
 {
 
+struct ShaderSourceInfo
+{
+  uint64_t size;
+  const void* data;
+};
+
 enum MaterialInputType
 {
   Input_Buffer,
@@ -53,6 +59,7 @@ friend QuartzResult ConvolveHdri();
 public:
   Material() : m_isValid(false), m_isBase(true) {}
   Material(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs);
+  QuartzResult Init(ShaderSourceInfo vertInfo, ShaderSourceInfo fragInfo, const std::vector<MaterialInput>& inputs, QuartzPipelineSettingFlags pipelineSettings = 0);
   QuartzResult Init(const std::vector<std::string>& shaderPaths, const std::vector<MaterialInput>& inputs, QuartzPipelineSettingFlags pipelineSettings = 0);
   Material(Material& existingMaterial, const std::vector<MaterialInputValue>& inputs);
   QuartzResult Init(Material& existingMaterial, const std::vector<MaterialInputValue>& inputs);
@@ -61,6 +68,9 @@ public:
 
   void Shutdown();
   QuartzResult Reload();
+  QuartzResult UpdateInputs();
+  QuartzResult UpdateInputs(const std::vector<MaterialInputValue>& inputs);
+  void SetSingleInput(uint32_t index, MaterialInputValue input);
   inline bool IsValid() const { return m_isValid; }
 
 private:
@@ -69,8 +79,8 @@ private:
   Material* m_parent = nullptr;
   QuartzPipelineSettingFlags m_pipelineSettings = Pipeline_Cull_Back;
 
-  OpalRenderpass m_renderpass;
-  OpalInputLayout m_layout;
+  OpalRenderpass m_renderpass = OPAL_NULL_HANDLE;
+  OpalInputLayout m_layout = OPAL_NULL_HANDLE;
   OpalBuffer m_buffer;
   OpalInputSet m_set;
   std::vector<OpalShader> m_shaders;
@@ -80,8 +90,10 @@ private:
   std::vector<std::string> m_shaderPaths;
 
   QuartzResult InitInputs(const std::vector<MaterialInput>& inputs);
-  QuartzResult InitShaders(const std::vector<std::string>& shaderPaths);
+  QuartzResult InitShaderFiles(const std::vector<std::string>& shaderPaths);
   QuartzResult InitMaterial();
+
+  QuartzResult InitShader(uint32_t size, const void* source, OpalShaderType type, OpalShader* outShader);
 
   QuartzResult Bind() const;
 };

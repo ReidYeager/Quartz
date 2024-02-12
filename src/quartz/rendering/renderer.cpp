@@ -79,6 +79,7 @@ QuartzResult Renderer::Init(Window* window)
   QTZ_ATTEMPT_OPAL(OpalWindowInit(&m_window, windowInfo));
   OpalImage windowBufferImage;
   OpalWindowGetBufferImage(m_window, &windowBufferImage);
+  m_windowBufferTexture.usage = 0;
   m_windowBufferTexture.Init(windowBufferImage);
 
   // ==============================

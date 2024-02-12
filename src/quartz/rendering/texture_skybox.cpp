@@ -3,6 +3,7 @@
 #include "quartz/core/core.h"
 #include "quartz/rendering/texture.h"
 #include "quartz/rendering/material.h"
+#include "quartz/rendering/texture_skybox_shaders.inl"
 
 namespace Quartz
 {
@@ -187,14 +188,17 @@ QuartzResult TextureSkybox::CreateDiffuse(const Mesh& screenQuadMesh)
 
   // Material ==============================
 
-  // TODO : Temporary
-  Material mat;
-  mat.m_renderpass = diffuseRenderpass;
-  QTZ_ATTEMPT(mat.Init(
-    {
-      "D:/Dev/QuartzSandbox/res/shaders/compiled/t_convolution.vert.spv",
-      "D:/Dev/QuartzSandbox/res/shaders/compiled/t_convolutionDiffuse.frag.spv"
-    },
+  Material diffuseMaterial;
+  diffuseMaterial.m_renderpass = diffuseRenderpass;
+
+  ShaderSourceInfo vertInfo, fragInfo;
+  vertInfo.size = resSkyboxVertShaderByteCount;
+  vertInfo.data = (void*)resSkyboxVertShaderBytes;
+  fragInfo.size = resSkyboxDiffuseFragShaderByteCount;
+  fragInfo.data = (void*)resSkyboxDiffuseFragShaderBytes;
+
+  QTZ_ATTEMPT(diffuseMaterial.Init(
+    vertInfo, fragInfo,
     {
       {.type = Quartz::Input_Texture, .value = { .texture = &m_baseImage } }
     },
@@ -204,7 +208,7 @@ QuartzResult TextureSkybox::CreateDiffuse(const Mesh& screenQuadMesh)
 
   QTZ_ATTEMPT_OPAL(OpalRenderBeginSingle());
   OpalRenderBeginRenderpass(diffuseRenderpass, diffuseFramebuffer);
-  QTZ_ATTEMPT(mat.Bind());
+  QTZ_ATTEMPT(diffuseMaterial.Bind());
   screenQuadMesh.Render();
   OpalRenderEndRenderpass(diffuseRenderpass);
   QTZ_ATTEMPT_OPAL(OpalRenderEndSingle());
@@ -223,7 +227,7 @@ QuartzResult TextureSkybox::CreateDiffuse(const Mesh& screenQuadMesh)
 
   // Shutdown ==============================
 
-  mat.Shutdown();
+  diffuseMaterial.Shutdown();
   OpalFramebufferShutdown(&diffuseFramebuffer);
   OpalRenderpassShutdown(&diffuseRenderpass);
   return Quartz_Success;
@@ -298,11 +302,15 @@ QuartzResult TextureSkybox::CreateSpecular(const Mesh& screenQuadMesh)
 
   Material specularMaterial;
   specularMaterial.m_renderpass = specularRenderpass;
+
+  ShaderSourceInfo vertInfo, fragInfo;
+  vertInfo.size = resSkyboxVertShaderByteCount;
+  vertInfo.data = (void*)resSkyboxVertShaderBytes;
+  fragInfo.size = resSkyboxSpecularFragShaderByteCount;
+  fragInfo.data = (void*)resSkyboxSpecularFragShaderBytes;
+
   QTZ_ATTEMPT(specularMaterial.Init(
-    {
-      "D:/Dev/QuartzSandbox/res/shaders/compiled/t_convolution.vert.spv",
-      "D:/Dev/QuartzSandbox/res/shaders/compiled/t_convolutionSpecular.frag.spv"
-    },
+    vertInfo, fragInfo,
     {
       { .type = Quartz::Input_Texture, .value = { .texture = &m_baseImage } },
       { .type = Quartz::Input_Buffer , .value = { .buffer  = &dummyBuffer } }
@@ -504,14 +512,17 @@ QuartzResult TextureSkybox::CreateBrdf(const Mesh& screenQuadMesh)
 
   // Material ==============================
 
-  // TODO : Temporary
-  Material mat;
-  mat.m_renderpass = brdfRenderpass;
-  QTZ_ATTEMPT(mat.Init(
-    {
-      "D:/Dev/QuartzSandbox/res/shaders/compiled/t_convolution.vert.spv",
-      "D:/Dev/QuartzSandbox/res/shaders/compiled/t_convolutionBrdf.frag.spv"
-    },
+  Material brdfMaterial;
+  brdfMaterial.m_renderpass = brdfRenderpass;
+
+  ShaderSourceInfo vertInfo, fragInfo;
+  vertInfo.size = resSkyboxVertShaderByteCount;
+  vertInfo.data = (void*)resSkyboxVertShaderBytes;
+  fragInfo.size = resSkyboxBrdfFragShaderByteCount;
+  fragInfo.data = (void*)resSkyboxBrdfFragShaderBytes;
+
+  QTZ_ATTEMPT(brdfMaterial.Init(
+    vertInfo, fragInfo,
     { },
     Quartz::Pipeline_Cull_None));
 
@@ -519,7 +530,7 @@ QuartzResult TextureSkybox::CreateBrdf(const Mesh& screenQuadMesh)
 
   QTZ_ATTEMPT_OPAL(OpalRenderBeginSingle());
   OpalRenderBeginRenderpass(brdfRenderpass, brdfFramebuffer);
-  QTZ_ATTEMPT(mat.Bind());
+  QTZ_ATTEMPT(brdfMaterial.Bind());
   screenQuadMesh.Render();
   OpalRenderEndRenderpass(brdfRenderpass);
   QTZ_ATTEMPT_OPAL(OpalRenderEndSingle());
@@ -538,7 +549,7 @@ QuartzResult TextureSkybox::CreateBrdf(const Mesh& screenQuadMesh)
 
   // Shutdown ==============================
 
-  mat.Shutdown();
+  brdfMaterial.Shutdown();
   OpalFramebufferShutdown(&brdfFramebuffer);
   OpalRenderpassShutdown(&brdfRenderpass);
   return Quartz_Success;

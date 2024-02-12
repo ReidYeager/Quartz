@@ -245,6 +245,7 @@ QuartzResult Texture::InitOpalImage()
 
   info.usage |= ((usage & Texture_Usage_Shader_Input) != 0) * Opal_Image_Usage_Uniform;
   info.usage |= ((usage & Texture_Usage_Framebuffer) != 0) * (format == Texture_Format_Depth ? Opal_Image_Usage_Depth : Opal_Image_Usage_Color);
+  info.usage |= Opal_Image_Usage_Copy_Src;
 
   switch (format)
   {
@@ -322,6 +323,11 @@ QuartzResult Texture::Resize(Vec2U newExtents)
   extents = newExtents;
 
   return Quartz_Success;
+}
+
+uint64_t Texture::Dump_Debug(void** outData) const
+{
+  return OpalImageDumpData(m_opalImage, outData);
 }
 
 } // namespace Quartz
