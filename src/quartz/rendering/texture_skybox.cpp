@@ -134,7 +134,7 @@ QuartzResult TextureSkybox::CreateDiffuse(const Mesh& screenQuadMesh)
   // Image creation ==============================
 
   OpalImageInitInfo imageInfo = {};
-  imageInfo.extent.height = 64;
+  imageInfo.extent.height = 128;
   imageInfo.extent.width = imageInfo.extent.height * ((float)extents.width / (float)extents.height);
   imageInfo.extent.depth = 1;
   imageInfo.mipLevels = 1;

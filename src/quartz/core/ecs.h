@@ -33,6 +33,10 @@ public:
   Entity();
   ~Entity();
 
+  inline bool IsEnabled() const;
+  void Enable();
+  void Disable();
+
   template<typename T>
   inline bool Has() { return __HasComponent(m_id, Quartz::__ComponentId(typeid(T).name())); }
   template<typename T>
@@ -44,6 +48,7 @@ public:
 
 private:
   Diamond::Entity m_id;
+  bool m_isEnabled = true;
 };
 
 class ObjectIterator

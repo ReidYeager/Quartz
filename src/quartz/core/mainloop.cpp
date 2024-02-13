@@ -135,6 +135,8 @@ QuartzResult UpdateCameraVisibility()
 
 QuartzResult UpdatePacket()
 {
+  g_packet = {};
+
   ObjectIterator lightDirIter({g_coreState.ecsIds.lightDir});
   while (!lightDirIter.AtEnd())
   {

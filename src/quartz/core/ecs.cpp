@@ -51,6 +51,21 @@ Entity::~Entity()
   g_coreState.ecsWorld.DestroyEntity(m_id);
 }
 
+inline bool Entity::IsEnabled() const
+{
+  return g_coreState.ecsWorld.GetEntityEnabled(m_id);
+}
+
+void Entity::Enable()
+{
+  g_coreState.ecsWorld.SetEntityEnabled(m_id, true);
+}
+
+void Entity::Disable()
+{
+  g_coreState.ecsWorld.SetEntityEnabled(m_id, false);
+}
+
 ObjectIterator::ObjectIterator(const std::vector<ComponentId>& componentIds)
 {
   m_iterator.Init(&g_coreState.ecsWorld, componentIds);
