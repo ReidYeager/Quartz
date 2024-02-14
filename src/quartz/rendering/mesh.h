@@ -28,7 +28,7 @@ public:
   QuartzResult InitFromDump(const char* path);
   void Shutdown();
 
-  void Dump(const char* path);
+  void Dump(uint64_t* outVertCount, const Vertex** outVertices, uint64_t* outIndexCount, const uint32_t** outIndices) const;
 
   inline bool IsValid() const { return m_isValid; }
 

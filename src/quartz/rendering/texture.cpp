@@ -102,6 +102,43 @@ QuartzResult Texture::Load32BitImage(const char* path, int32_t* outWidth, int32_
   return Quartz_Success;
 }
 
+QuartzResult Texture::InitFromDump(const char* path)
+{
+  if (m_isValid)
+  {
+    QTZ_WARNING("Attempting to intialize a valid texture");
+    return Quartz_Success;
+  }
+
+  FILE* inFile;
+  errno_t error = fopen_s(&inFile, path, "rb");
+
+  if (error)
+  {
+    QTZ_ERROR("Failed to load texture dump \"{}\"", path);
+    return Quartz_Failure;
+  }
+
+  fread(&format,     sizeof(format),     1, inFile);
+  fread(&usage,      sizeof(usage),      1, inFile);
+  fread(&filtering,  sizeof(filtering),  1, inFile);
+  fread(&sampleMode, sizeof(sampleMode), 1, inFile);
+  fread(&mipLevels,  sizeof(mipLevels),  1, inFile);
+  fread(&extents,    sizeof(extents),    1, inFile);
+
+  uint64_t size;
+  fread(&size, sizeof(size), 1, inFile);
+  void* pixels = malloc(size);
+  fread(pixels, size, 1, inFile);
+
+  QTZ_ATTEMPT(Init(pixels));
+
+  free(pixels);
+  fclose(inFile);
+
+  return Quartz_Success;
+}
+
 // Assembled
 // ============================================================
 

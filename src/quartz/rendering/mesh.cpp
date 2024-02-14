@@ -216,13 +216,14 @@ QuartzResult Mesh::InitFromDump(const char* path)
 
   std::vector<Vertex> verts;
   std::vector<uint32_t> indices;
-  size_t vertCount;
-  size_t indexCount;
+  uint64_t vertCount;
+  uint64_t indexCount;
 
-  fread(&vertCount, sizeof(size_t), 1, inFile);
+  fread(&vertCount, sizeof(vertCount), 1, inFile);
   verts.resize(vertCount);
   fread(verts.data(), sizeof(Vertex), vertCount, inFile);
-  fread(&indexCount, sizeof(size_t), 1, inFile);
+
+  fread(&indexCount, sizeof(indexCount), 1, inFile);
   indices.resize(indexCount);
   fread(indices.data(), sizeof(uint32_t), indexCount, inFile);
 
@@ -244,25 +245,13 @@ void Mesh::Shutdown()
   OpalMeshShutdown(&m_opalMesh);
 }
 
-void Mesh::Dump(const char* path)
+void Mesh::Dump(uint64_t* outVertCount, const Vertex** outVertices, uint64_t* outIndexCount, const uint32_t** outIndices) const
 {
-  FILE* outFile;
-  int err = fopen_s(&outFile, path, "wb");
-  if (err)
-  {
-    QTZ_ERROR("Failed to open a file to dump the mesh (\"%s\")", path);
-    return;
-  }
+  *outVertCount = m_verticies.size();
+  *outVertices = m_verticies.data();
 
-  size_t vertCount = m_verticies.size();
-  size_t indexCount = m_indices.size();
-
-  fwrite(&vertCount, sizeof(size_t), 1, outFile);
-  fwrite(m_verticies.data(), sizeof(Vertex), m_verticies.size(), outFile);
-  fwrite(&indexCount, sizeof(size_t), 1, outFile);
-  fwrite(m_indices.data(), sizeof(uint32_t), m_indices.size(), outFile);
-
-  fclose(outFile);
+  *outIndexCount = m_indices.size();
+  *outIndices = m_indices.data();
 }
 
 void Mesh::Render() const

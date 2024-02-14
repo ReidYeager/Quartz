@@ -58,10 +58,14 @@ QuartzResult Renderer::Init(Window* window)
   };
 
   OpalInitInfo opalInfo;
+  #ifdef QTZ_CONFIG_DEBUG
   opalInfo.debug = true;
+  #else
+  opalInfo.debug = false;
+  #endif // QTZ_CONFIG_DEBUG
+  opalInfo.messageCallback = OpalMessageCallback;
   opalInfo.vertexStruct.count = vertexFormatCount;
   opalInfo.vertexStruct.pFormats = vertexFormats;
-  opalInfo.messageCallback = OpalMessageCallback;
 
   OpalWindowInitInfo windowInfo;
   windowInfo.extents.width = window->Width();
@@ -91,7 +95,7 @@ QuartzResult Renderer::Init(Window* window)
   m_depthTexture.usage = Quartz::Texture_Usage_Framebuffer;
   m_depthTexture.format = Quartz::Texture_Format_Depth;
   m_depthTexture.mipLevels = 1;
-  m_depthTexture.Init();
+  QTZ_ATTEMPT(m_depthTexture.Init());
 
   // ==============================
   // Renderpass

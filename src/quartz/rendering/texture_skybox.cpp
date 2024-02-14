@@ -59,6 +59,25 @@ QuartzResult TextureSkybox::Init(const void* pixels)
   return Quartz_Success;
 }
 
+QuartzResult TextureSkybox::InitFromDump(const char* path)
+{
+  if (m_isValid)
+  {
+    QTZ_WARNING("Attemting to initialize a valid skybox");
+    return Quartz_Success;
+  }
+
+  QTZ_ATTEMPT(m_baseImage.InitFromDump(path));
+
+  extents = m_baseImage.extents;
+  baseFormat = m_baseImage.format;
+
+  QTZ_ATTEMPT(CreateIbl());
+
+  m_isValid = true;
+  return Quartz_Success;
+}
+
 // Shutdown
 // ============================================================
 

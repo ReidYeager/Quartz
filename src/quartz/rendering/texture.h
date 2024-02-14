@@ -79,6 +79,8 @@ public:
   QuartzResult Init(const std::vector<Vec3>& pixels);
   QuartzResult Init(const std::vector<Vec4>& pixels);
 
+  QuartzResult InitFromDump(const char* path);
+
   // TODO:
   QuartzResult Resize(Vec2U newExtents);
   QuartzResult FillImage(const void* pixels);
@@ -145,6 +147,7 @@ private:
 public:
   QuartzResult Init(const char* path);
   QuartzResult Init(const void* pixels);
+  QuartzResult InitFromDump(const char* path);
   void Shutdown();
 
   const inline Texture& GetBase()     const { return m_baseImage;     }

@@ -64,13 +64,13 @@ void UpdateTimes()
   auto diff = g_coreState.time.clocks.frameEnd - g_coreState.time.clocks.frameStart;
   g_coreState.time.delta = std::chrono::duration_cast<std::chrono::microseconds>(diff).count() * 0.000001;
 
-#ifdef QTZ_DEBUG
+#ifdef QTZ_CONFIG_DEBUG
   // Ignore large deltas that may be caused by debugging
   if (g_coreState.time.delta >= 1.0)
   {
     g_coreState.time.delta = 0.016;
   }
-#endif // QTZ_DEBUG
+#endif // QTZ_CONFIG_DEBUG
 
   g_coreState.time.deltaSum += g_coreState.time.delta;
 
