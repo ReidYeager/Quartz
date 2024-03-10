@@ -190,6 +190,11 @@ QuartzResult Texture::Init(const std::vector<Vec3>& pixels)
 
     pixelData = (void*)pixelsRgba32.data();
   } break;
+  default:
+  {
+    QTZ_ERROR("Can not initialize a texture with the given format");
+    return Quartz_Failure;
+  }
   }
 
   QTZ_ATTEMPT(InitOpalImage());
@@ -231,6 +236,11 @@ QuartzResult Texture::Init(const std::vector<Vec4>& pixels)
   {
     pixelData = (void*)pixels.data();
   } break;
+  default:
+  {
+    QTZ_ERROR("Can not initialize a texture with the given format");
+    return Quartz_Failure;
+  }
   }
 
   QTZ_ATTEMPT(InitOpalImage());
@@ -248,21 +258,14 @@ QuartzResult Texture::Init(OpalImage opalImage)
 
   if (usage & Texture_Usage_Shader_Input)
   {
-    OpalInputValue inValue = {};
-    inValue.image = m_opalImage;
+    OpalShaderInputValue inValue;
+    inValue.image = &m_opalImage;
 
-    OpalInputSetInitInfo setInfo = {};
+    OpalShaderInputInitInfo setInfo;
     setInfo.layout = g_coreState.renderer.GetSingleImageLayout();
-    setInfo.pInputValues = &inValue;
+    setInfo.pValues = &inValue;
 
-    QTZ_ATTEMPT_OPAL(OpalInputSetInit(&m_inputSet, setInfo));
-
-    OpalInputInfo imageInput = {};
-    imageInput.type = Opal_Input_Type_Samped_Image;
-    imageInput.value.image = m_opalImage;
-    imageInput.index = 0;
-
-    QTZ_ATTEMPT_OPAL(OpalInputSetUpdate(m_inputSet, 1, &imageInput));
+    QTZ_ATTEMPT_OPAL(OpalShaderInputInit(&m_inputSet, setInfo));
   }
 
   m_isValid = true;
@@ -272,13 +275,14 @@ QuartzResult Texture::Init(OpalImage opalImage)
 QuartzResult Texture::InitOpalImage()
 {
   OpalImageInitInfo info = {};
-  info.extent = OpalExtent{ extents.width, extents.height, 1 };
+  info.width = extents.width;
+  info.height = extents.height;
 
   if (mipLevels == 0)
   {
     mipLevels = (uint32_t)floor(log2((double)PeriMax(extents.width, extents.height)));
   }
-  info.mipLevels = mipLevels;
+  info.mipCount = mipLevels;
 
   info.usage |= ((usage & Texture_Usage_Shader_Input) != 0) * Opal_Image_Usage_Uniform;
   info.usage |= ((usage & Texture_Usage_Framebuffer) != 0) * (format == Texture_Format_Depth ? Opal_Image_Usage_Depth : Opal_Image_Usage_Color);
@@ -294,8 +298,8 @@ QuartzResult Texture::InitOpalImage()
 
   switch (filtering)
   {
-  case Quartz::Texture_Filter_Linear: info.filterType = Opal_Image_Filter_Bilinear; break;
-  case Quartz::Texture_Filter_Nearest: info.filterType = Opal_Image_Filter_Point; break;
+  case Quartz::Texture_Filter_Linear: info.filter = Opal_Image_Filter_Linear; break;
+  case Quartz::Texture_Filter_Nearest: info.filter = Opal_Image_Filter_Point; break;
   }
 
   switch (sampleMode)
@@ -309,21 +313,14 @@ QuartzResult Texture::InitOpalImage()
 
   if (usage & Texture_Usage_Shader_Input)
   {
-    OpalInputValue inValue = {};
-    inValue.image = m_opalImage;
+    OpalShaderInputValue inValue;
+    inValue.image = &m_opalImage;
 
-    OpalInputSetInitInfo setInfo = {};
+    OpalShaderInputInitInfo setInfo;
     setInfo.layout = g_coreState.renderer.GetSingleImageLayout();
-    setInfo.pInputValues = &inValue;
+    setInfo.pValues = &inValue;
 
-    QTZ_ATTEMPT_OPAL(OpalInputSetInit(&m_inputSet, setInfo));
-
-    OpalInputInfo imageInput = {};
-    imageInput.type = Opal_Input_Type_Samped_Image;
-    imageInput.value.image = m_opalImage;
-    imageInput.index = 0;
-
-    QTZ_ATTEMPT_OPAL(OpalInputSetUpdate(m_inputSet, 1, &imageInput));
+    QTZ_ATTEMPT_OPAL(OpalShaderInputInit(&m_inputSet, setInfo));
   }
 
   m_isValid = true;
@@ -338,7 +335,7 @@ QuartzResult Texture::FillImage(const void* pixels)
     return Quartz_Failure;
   }
 
-  QTZ_ATTEMPT_OPAL(OpalImageFill(m_opalImage, pixels));
+  QTZ_ATTEMPT_OPAL(OpalImagePushData(&m_opalImage, pixels));
 
   return Quartz_Success;
 }
@@ -354,17 +351,25 @@ QuartzResult Texture::Resize(Vec2U newExtents)
     return Quartz_Failure;
   }
 
-  OpalExtent e = OpalExtent{ newExtents.width, newExtents.height, 1 };
-  QTZ_ATTEMPT_OPAL(OpalImageResize(m_opalImage, e));
+  OpalImageInitInfo depthImageInfo;
+  depthImageInfo.width      = newExtents.width;
+  depthImageInfo.height     = newExtents.height;
+  depthImageInfo.filter     = m_opalImage.filter;
+  depthImageInfo.format     = m_opalImage.format;
+  depthImageInfo.mipCount   = m_opalImage.mipCount;
+  depthImageInfo.sampleMode = m_opalImage.sampleMode;
+  depthImageInfo.usage      = m_opalImage.usage;
+  OpalImageShutdown(&m_opalImage);
+  QTZ_ATTEMPT_OPAL(OpalImageInit(&m_opalImage, depthImageInfo));
 
   extents = newExtents;
 
   return Quartz_Success;
 }
 
-uint64_t Texture::Dump_Debug(void** outData) const
-{
-  return OpalImageDumpData(m_opalImage, outData);
-}
+//uint64_t Texture::Dump_Debug(void** outData) const
+//{
+//  return OpalImageDumpData(m_opalImage, outData);
+//}
 
 } // namespace Quartz

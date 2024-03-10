@@ -15,6 +15,16 @@ enum QuartzResult
   Quartz_Failure_Vendor,
 };
 
+struct QuartzInitInfo
+{
+  struct
+  {
+    Vec2U extents = { 1280, 720 };
+    Vec2I position = { 0, 0 };
+    const char* title = "Quartz application";
+  } window;
+};
+
 namespace Quartz
 {
 extern uint32_t g_quartzAttemptDepth;

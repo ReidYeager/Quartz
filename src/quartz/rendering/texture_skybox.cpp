@@ -153,14 +153,13 @@ QuartzResult TextureSkybox::CreateDiffuse(const Mesh& screenQuadMesh)
   // Image creation ==============================
 
   OpalImageInitInfo imageInfo = {};
-  imageInfo.extent.height = 128;
-  imageInfo.extent.width = imageInfo.extent.height * ((float)extents.width / (float)extents.height);
-  imageInfo.extent.depth = 1;
-  imageInfo.mipLevels = 1;
+  imageInfo.height = 128;
+  imageInfo.width = imageInfo.height * ((float)extents.width / (float)extents.height);
+  imageInfo.mipCount = 1;
   // For :          Rendering to           | Use in pbr shaders
   imageInfo.usage = Opal_Image_Usage_Color | Opal_Image_Usage_Uniform;
   imageInfo.format = Opal_Format_RGBA32;
-  imageInfo.filterType = Opal_Image_Filter_Bilinear;
+  imageInfo.filter = Opal_Image_Filter_Linear;
   imageInfo.sampleMode = Opal_Image_Sample_Clamp;
 
   OpalImage diffuseOpalImage;
@@ -169,37 +168,29 @@ QuartzResult TextureSkybox::CreateDiffuse(const Mesh& screenQuadMesh)
   // Renderpass ==============================
 
   const uint32_t attachmentCount = 1;
+  const uint32_t subpassCount = 1;
+  OpalAttachmentUsage attachmentUses[subpassCount] = { Opal_Attachment_Usage_Output_Uniform };
   OpalAttachmentInfo attachment;
   attachment.clearValue.color = OpalColorValue{ 1.0f, 0.0f, 1.0f, 1.0f };
   attachment.format = Opal_Format_RGBA32;
-  attachment.loadOp = Opal_Attachment_Op_Clear;
+  attachment.loadOp = Opal_Attachment_Load_Op_Clear;
   attachment.shouldStore = true;
-  attachment.usage = Opal_Attachment_Usage_Color;
-
-  uint32_t zeroIndex = 0;
-  OpalSubpassInfo subpass;
-  subpass.depthAttachmentIndex = OPAL_DEPTH_ATTACHMENT_NONE;
-  subpass.colorAttachmentCount = 1;
-  subpass.pColorAttachmentIndices = &zeroIndex;
-  subpass.inputAttachmentCount = 0;
-  subpass.pInputColorAttachmentIndices = nullptr;
+  attachment.pSubpassUsages = attachmentUses;
 
   OpalRenderpassInitInfo renderpassInfo = {};
-  renderpassInfo.dependencyCount = 0;
-  renderpassInfo.pDependencies = nullptr;
-  renderpassInfo.imageCount = attachmentCount;
+  renderpassInfo.attachmentCount = attachmentCount;
   renderpassInfo.pAttachments = &attachment;
-  renderpassInfo.subpassCount = 1;
-  renderpassInfo.pSubpasses = &subpass;
+  renderpassInfo.subpassCount = subpassCount;
 
   OpalRenderpass diffuseRenderpass;
   QTZ_ATTEMPT_OPAL(OpalRenderpassInit(&diffuseRenderpass, renderpassInfo));
 
   // Framebuffer ==============================
 
+  OpalImage* fbImages[] = { &diffuseOpalImage };
   OpalFramebufferInitInfo framebufferInfo;
   framebufferInfo.imageCount = 1;
-  framebufferInfo.pImages = &diffuseOpalImage;
+  framebufferInfo.ppImages = &fbImages[0];
   framebufferInfo.renderpass = diffuseRenderpass;
 
   OpalFramebuffer diffuseFramebuffer;
@@ -208,7 +199,6 @@ QuartzResult TextureSkybox::CreateDiffuse(const Mesh& screenQuadMesh)
   // Material ==============================
 
   Material diffuseMaterial;
-  diffuseMaterial.m_renderpass = diffuseRenderpass;
 
   ShaderSourceInfo vertInfo, fragInfo;
   vertInfo.size = resSkyboxVertShaderByteCount;
@@ -221,23 +211,22 @@ QuartzResult TextureSkybox::CreateDiffuse(const Mesh& screenQuadMesh)
     {
       {.type = Quartz::Input_Texture, .value = { .texture = &m_baseImage } }
     },
+    diffuseRenderpass,
     Quartz::Pipeline_Cull_None));
 
   // Render ==============================
 
-  QTZ_ATTEMPT_OPAL(OpalRenderBeginSingle());
-  OpalRenderBeginRenderpass(diffuseRenderpass, diffuseFramebuffer);
+  QTZ_ATTEMPT_OPAL(OpalRenderBegin());
+  OpalRenderRenderpassBegin(&diffuseRenderpass, &diffuseFramebuffer);
   QTZ_ATTEMPT(diffuseMaterial.Bind());
   screenQuadMesh.Render();
-  OpalRenderEndRenderpass(diffuseRenderpass);
-  QTZ_ATTEMPT_OPAL(OpalRenderEndSingle());
+  OpalRenderRenderpassEnd(&diffuseRenderpass);
+  QTZ_ATTEMPT_OPAL(OpalRenderEnd());
 
   // Convert to texture ==============================
 
-  QTZ_ATTEMPT_OPAL(OpalImageTransition(diffuseOpalImage, Opal_Image_Usage_Uniform));
-
   m_diffuseImage.mipLevels = 1;
-  m_diffuseImage.extents = Vec2U{ imageInfo.extent.width, imageInfo.extent.height };
+  m_diffuseImage.extents = Vec2U{ imageInfo.width, imageInfo.height };
   m_diffuseImage.format = Texture_Format_RGBA32;
   m_diffuseImage.usage = Texture_Usage_Shader_Input;
   m_diffuseImage.filtering = Texture_Filter_Linear;
@@ -264,8 +253,8 @@ QuartzResult TextureSkybox::CreateSpecular(const Mesh& screenQuadMesh)
   {
     Buffer buffer;
     Material material;
-    VkImageView imageView;
-    VkFramebuffer framebuffer;
+    OpalImage mipImage;
+    OpalFramebuffer framebuffer;
   };
   SpecularMipInfo specularMips[levelCount];
 
@@ -275,14 +264,13 @@ QuartzResult TextureSkybox::CreateSpecular(const Mesh& screenQuadMesh)
   // Image creation ==============================
 
   OpalImageInitInfo imageInfo = {};
-  imageInfo.extent.height = imageInfo.extent.height = 512;
-  imageInfo.extent.width = imageInfo.extent.height * ((float)extents.width / (float)extents.height);
-  imageInfo.extent.depth = 1;
-  imageInfo.mipLevels = levelCount;
+  imageInfo.height = 512;
+  imageInfo.width = imageInfo.height * ((float)extents.width / (float)extents.height);
+  imageInfo.mipCount = levelCount;
   // For :          Rendering to           | Use in pbr shaders
   imageInfo.usage = Opal_Image_Usage_Color | Opal_Image_Usage_Uniform;
   imageInfo.format = Opal_Format_RGBA32;
-  imageInfo.filterType = Opal_Image_Filter_Bilinear;
+  imageInfo.filter = Opal_Image_Filter_Linear;
   imageInfo.sampleMode = Opal_Image_Sample_Clamp;
 
   OpalImage specularOpalImage;
@@ -291,28 +279,19 @@ QuartzResult TextureSkybox::CreateSpecular(const Mesh& screenQuadMesh)
   // Renderpass ==============================
 
   const uint32_t attachmentCount = 1;
+  const uint32_t subpassCount = 1;
+  OpalAttachmentUsage attachmentUses[subpassCount] = { Opal_Attachment_Usage_Output_Uniform };
   OpalAttachmentInfo attachment;
   attachment.clearValue.color = OpalColorValue{ 1.0f, 0.0f, 1.0f, 1.0f };
   attachment.format = Opal_Format_RGBA32;
-  attachment.loadOp = Opal_Attachment_Op_Clear;
+  attachment.loadOp = Opal_Attachment_Load_Op_Clear;
   attachment.shouldStore = true;
-  attachment.usage = Opal_Attachment_Usage_Color;
-
-  uint32_t zeroIndex = 0;
-  OpalSubpassInfo subpass;
-  subpass.depthAttachmentIndex = OPAL_DEPTH_ATTACHMENT_NONE;
-  subpass.colorAttachmentCount = 1;
-  subpass.pColorAttachmentIndices = &zeroIndex;
-  subpass.inputAttachmentCount = 0;
-  subpass.pInputColorAttachmentIndices = nullptr;
+  attachment.pSubpassUsages = attachmentUses;
 
   OpalRenderpassInitInfo renderpassInfo = {};
-  renderpassInfo.dependencyCount = 0;
-  renderpassInfo.pDependencies = nullptr;
-  renderpassInfo.imageCount = attachmentCount;
+  renderpassInfo.attachmentCount = attachmentCount;
   renderpassInfo.pAttachments = &attachment;
-  renderpassInfo.subpassCount = 1;
-  renderpassInfo.pSubpasses = &subpass;
+  renderpassInfo.subpassCount = subpassCount;
 
   OpalRenderpass specularRenderpass;
   QTZ_ATTEMPT_OPAL(OpalRenderpassInit(&specularRenderpass, renderpassInfo));
@@ -334,6 +313,7 @@ QuartzResult TextureSkybox::CreateSpecular(const Mesh& screenQuadMesh)
       { .type = Quartz::Input_Texture, .value = { .texture = &m_baseImage } },
       { .type = Quartz::Input_Buffer , .value = { .buffer  = &dummyBuffer } }
     },
+    specularRenderpass,
     Quartz::Pipeline_Cull_None));
 
   // Mips ==============================
@@ -343,45 +323,17 @@ QuartzResult TextureSkybox::CreateSpecular(const Mesh& screenQuadMesh)
     VkResult vkResult;
     SpecularMipInfo& m = specularMips[i];
 
-    // Image view =====
-
-    VkImageViewCreateInfo viewCreateInfo = { 0 };
-    viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewCreateInfo.image = specularOpalImage->vk.image;
-    viewCreateInfo.format = specularOpalImage->vk.format;
-    viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    viewCreateInfo.subresourceRange.levelCount = 1;
-    viewCreateInfo.subresourceRange.layerCount = 1;
-    viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-    viewCreateInfo.subresourceRange.baseMipLevel = i;
-    vkResult = vkCreateImageView(oState.vk.device, &viewCreateInfo, oState.vk.allocator, &m.imageView);
-
-    if (vkResult != VK_SUCCESS)
-    {
-      QTZ_ERROR("Failed to initialize the image view for specular mip {}", i);
-      return Quartz_Failure_Vendor;
-    }
+    QTZ_ATTEMPT_OPAL(OpalImageGetMipAsImage(&specularOpalImage, &m.mipImage, i));
 
     // Framebuffer =====
 
-    VkFramebufferCreateInfo framebufferInfo;
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.flags = 0;
-    framebufferInfo.attachmentCount = 1;
-    framebufferInfo.pAttachments = &m.imageView;
-    framebufferInfo.height = imageInfo.extent.height * pow(0.5, i);
-    framebufferInfo.width  = imageInfo.extent.width  * pow(0.5, i);
-    framebufferInfo.layers = 1;
-    framebufferInfo.pNext = nullptr;
-    framebufferInfo.renderPass = specularRenderpass->vk.renderpass;
-    vkResult = vkCreateFramebuffer(oState.vk.device, &framebufferInfo, oState.vk.allocator, &m.framebuffer);
+    OpalImage* fbImages[] = { &m.mipImage };
+    OpalFramebufferInitInfo fbInfo;
+    fbInfo.imageCount = 1;
+    fbInfo.ppImages = &fbImages[0];
+    fbInfo.renderpass = specularRenderpass;
 
-    if (vkResult != VK_SUCCESS)
-    {
-      QTZ_ERROR("Failed to initialize the framebuffer for specular mip {}", i);
-      return Quartz_Failure_Vendor;
-    }
+    QTZ_ATTEMPT_OPAL(OpalFramebufferInit(&m.framebuffer, fbInfo));
 
     // Buffer =====
 
@@ -401,33 +353,26 @@ QuartzResult TextureSkybox::CreateSpecular(const Mesh& screenQuadMesh)
 
   // Render ==============================
 
-  QTZ_ATTEMPT_OPAL(OpalRenderBeginSingle());
+  QTZ_ATTEMPT_OPAL(OpalRenderBegin());
+
   for (uint32_t i = 0; i < levelCount; i++)
   {
     SpecularMipInfo& m = specularMips[i];
 
-    uint32_t mipHeight = imageInfo.extent.height * pow(0.5, i);
-    uint32_t mipWidth  = imageInfo.extent.width  * pow(0.5, i);
+    uint32_t mipHeight = imageInfo.height * pow(0.5, i);
+    uint32_t mipWidth  = imageInfo.width  * pow(0.5, i);
 
     // Begin Renderpass =====
 
-    VkRenderPassBeginInfo beginInfo = { 0 };
-    beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    beginInfo.renderPass = specularRenderpass->vk.renderpass;
-    beginInfo.clearValueCount = specularRenderpass->imageCount;
-    beginInfo.pClearValues = specularRenderpass->vk.pClearValues;
-    beginInfo.renderArea.offset = VkOffset2D{ 0, 0 };
-    beginInfo.framebuffer = m.framebuffer;
-    beginInfo.renderArea.extent = VkExtent2D{ mipWidth, mipHeight };
-    vkCmdBeginRenderPass(oState.vk.currentCommandBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    OpalRenderRenderpassBegin(&specularRenderpass, &m.framebuffer);
 
     // Material =====
 
     QTZ_ATTEMPT(m.material.Bind());
     OpalRenderSetViewportDimensions(mipWidth, mipHeight);
 
-    OpalRenderBindInputSet(Renderer::SceneSet(), 0);
-    OpalRenderBindInputSet(m.material.m_set, 1);
+    OpalRenderBindShaderInput(Renderer::SceneSet(), 0);
+    OpalRenderBindShaderInput(&m.material.m_inputSet, 1);
 
     // Mesh =====
 
@@ -435,16 +380,14 @@ QuartzResult TextureSkybox::CreateSpecular(const Mesh& screenQuadMesh)
 
     // End renderpass =====
 
-    vkCmdEndRenderPass(oState.vk.currentCommandBuffer);
+    OpalRenderRenderpassEnd(&specularRenderpass);
   }
-  QTZ_ATTEMPT_OPAL(OpalRenderEndSingle());
+  QTZ_ATTEMPT_OPAL(OpalRenderEnd());
 
   // Convert to texture ==============================
 
-  QTZ_ATTEMPT_OPAL(OpalImageTransition(specularOpalImage, Opal_Image_Usage_Uniform));
-
   m_specularImage.mipLevels = levelCount;
-  m_specularImage.extents = Vec2U{ imageInfo.extent.width, imageInfo.extent.height };
+  m_specularImage.extents = Vec2U{ imageInfo.width, imageInfo.height };
   m_specularImage.format = Texture_Format_RGBA32;
   m_specularImage.usage = Texture_Usage_Shader_Input;
   m_specularImage.filtering = Texture_Filter_Linear;
@@ -459,8 +402,8 @@ QuartzResult TextureSkybox::CreateSpecular(const Mesh& screenQuadMesh)
 
     m.material.Shutdown();
     m.buffer.Shutdown();
-    vkDestroyFramebuffer(oState.vk.device, m.framebuffer, oState.vk.allocator);
-    vkDestroyImageView(oState.vk.device, m.imageView, oState.vk.allocator);
+    OpalFramebufferShutdown(&m.framebuffer);
+    OpalImageShutdown(&m.mipImage);
   }
 
   specularMaterial.Shutdown();
@@ -477,14 +420,13 @@ QuartzResult TextureSkybox::CreateBrdf(const Mesh& screenQuadMesh)
   // Image creation ==============================
 
   OpalImageInitInfo imageInfo = {};
-  imageInfo.extent.height = m_brdfSize;
-  imageInfo.extent.width = m_brdfSize;
-  imageInfo.extent.depth = 1;
-  imageInfo.mipLevels = 1;
+  imageInfo.height = m_brdfSize;
+  imageInfo.width = m_brdfSize;
+  imageInfo.mipCount = 1;
   // For :          Rendering to           | Use in pbr shaders
   imageInfo.usage = Opal_Image_Usage_Color | Opal_Image_Usage_Uniform;
   imageInfo.format = Opal_Format_RG16;
-  imageInfo.filterType = Opal_Image_Filter_Bilinear;
+  imageInfo.filter = Opal_Image_Filter_Linear;
   imageInfo.sampleMode = Opal_Image_Sample_Clamp;
 
   OpalImage brdfOpalImage;
@@ -493,37 +435,29 @@ QuartzResult TextureSkybox::CreateBrdf(const Mesh& screenQuadMesh)
   // Renderpass ==============================
 
   const uint32_t attachmentCount = 1;
+  const uint32_t subpassCount = 1;
+  OpalAttachmentUsage attachmentUses[subpassCount] = { Opal_Attachment_Usage_Output_Uniform };
   OpalAttachmentInfo attachment;
   attachment.clearValue.color = OpalColorValue{ 1.0f, 0.0f, 1.0f, 1.0f };
   attachment.format = Opal_Format_RG16;
-  attachment.loadOp = Opal_Attachment_Op_Clear;
+  attachment.loadOp = Opal_Attachment_Load_Op_Clear;
   attachment.shouldStore = true;
-  attachment.usage = Opal_Attachment_Usage_Color;
-
-  uint32_t zeroIndex = 0;
-  OpalSubpassInfo subpass;
-  subpass.depthAttachmentIndex = OPAL_DEPTH_ATTACHMENT_NONE;
-  subpass.colorAttachmentCount = 1;
-  subpass.pColorAttachmentIndices = &zeroIndex;
-  subpass.inputAttachmentCount = 0;
-  subpass.pInputColorAttachmentIndices = nullptr;
+  attachment.pSubpassUsages = attachmentUses;
 
   OpalRenderpassInitInfo renderpassInfo = {};
-  renderpassInfo.dependencyCount = 0;
-  renderpassInfo.pDependencies = nullptr;
-  renderpassInfo.imageCount = attachmentCount;
+  renderpassInfo.attachmentCount = attachmentCount;
   renderpassInfo.pAttachments = &attachment;
-  renderpassInfo.subpassCount = 1;
-  renderpassInfo.pSubpasses = &subpass;
+  renderpassInfo.subpassCount = subpassCount;
 
   OpalRenderpass brdfRenderpass;
   QTZ_ATTEMPT_OPAL(OpalRenderpassInit(&brdfRenderpass, renderpassInfo));
 
   // Framebuffer ==============================
 
+  OpalImage* fbImages[] = { &brdfOpalImage };
   OpalFramebufferInitInfo framebufferInfo;
   framebufferInfo.imageCount = 1;
-  framebufferInfo.pImages = &brdfOpalImage;
+  framebufferInfo.ppImages = &fbImages[0];
   framebufferInfo.renderpass = brdfRenderpass;
 
   OpalFramebuffer brdfFramebuffer;
@@ -543,20 +477,19 @@ QuartzResult TextureSkybox::CreateBrdf(const Mesh& screenQuadMesh)
   QTZ_ATTEMPT(brdfMaterial.Init(
     vertInfo, fragInfo,
     { },
+    brdfRenderpass,
     Quartz::Pipeline_Cull_None));
 
   // Render ==============================
 
-  QTZ_ATTEMPT_OPAL(OpalRenderBeginSingle());
-  OpalRenderBeginRenderpass(brdfRenderpass, brdfFramebuffer);
+  QTZ_ATTEMPT_OPAL(OpalRenderBegin());
+  OpalRenderRenderpassBegin(&brdfRenderpass, &brdfFramebuffer);
   QTZ_ATTEMPT(brdfMaterial.Bind());
   screenQuadMesh.Render();
-  OpalRenderEndRenderpass(brdfRenderpass);
-  QTZ_ATTEMPT_OPAL(OpalRenderEndSingle());
+  OpalRenderRenderpassEnd(&brdfRenderpass);
+  QTZ_ATTEMPT_OPAL(OpalRenderEnd());
 
   // Convert to texture ==============================
-
-  QTZ_ATTEMPT_OPAL(OpalImageTransition(brdfOpalImage, Opal_Image_Usage_Uniform));
 
   m_brdfImage.mipLevels = 1;
   m_brdfImage.extents = Vec2U{ m_brdfSize, m_brdfSize };

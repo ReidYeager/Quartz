@@ -12,8 +12,8 @@
 namespace Quartz
 {
 
-OpalInputLayout Renderer::m_sceneLayout;
-OpalInputSet Renderer::m_sceneSet;
+OpalShaderInputLayout Renderer::m_sceneLayout;
+OpalShaderInput Renderer::m_sceneSet;
 
 void ImguiVkResultCheck(VkResult error) {}
 
@@ -25,22 +25,22 @@ void OpalMessageCallback(OpalMessageType type, const char* message)
   {
     //QTZ_INFO("Opal : {}", message);
   } break;
-  case Opal_Message_Debug:
-  {
-    QTZ_DEBUG("Opal : {}", message);
-  } break;
-  case Opal_Message_Warning:
-  {
-    QTZ_WARNING("Opal : {}", message);
-  } break;
+  //case Opal_Message_Debug:
+  //{
+  //  QTZ_DEBUG("Opal : {}", message);
+  //} break;
+  //case Opal_Message_Warning:
+  //{
+  //  QTZ_WARNING("Opal : {}", message);
+  //} break;
   case Opal_Message_Error:
   {
     QTZ_ERROR("Opal : {}", message);
   } break;
-  case Opal_Message_Fatal:
-  {
-    QTZ_FATAL("Opal : {}", message);
-  } break;
+  //case Opal_Message_Fatal:
+  //{
+  //  QTZ_FATAL("Opal : {}", message);
+  //} break;
   default: break;
   }
 }
@@ -48,6 +48,8 @@ void OpalMessageCallback(OpalMessageType type, const char* message)
 QuartzResult Renderer::Init(Window* window)
 {
   m_qWindow = window;
+
+  const WindowPlatformInfo platformInfo = window->PlatformInfo();
 
   const uint32_t vertexFormatCount = 4;
   OpalFormat vertexFormats[vertexFormatCount] = {
@@ -58,39 +60,37 @@ QuartzResult Renderer::Init(Window* window)
   };
 
   OpalInitInfo opalInfo;
-  #ifdef QTZ_CONFIG_DEBUG
-  opalInfo.debug = true;
-  #else
-  opalInfo.debug = false;
-  #endif // QTZ_CONFIG_DEBUG
+#ifdef QTZ_CONFIG_DEBUG
+  opalInfo.useDebug = true;
+#else
+  opalInfo.useDebug = false;
+#endif // QTZ_CONFIG_DEBUG
+  opalInfo.api = Opal_Api_Vulkan;
   opalInfo.messageCallback = OpalMessageCallback;
-  opalInfo.vertexStruct.count = vertexFormatCount;
-  opalInfo.vertexStruct.pFormats = vertexFormats;
-
-  OpalWindowInitInfo windowInfo;
-  windowInfo.extents.width = window->Width();
-  windowInfo.extents.height = window->Height();
-
-  const WindowPlatformInfo platformInfo = window->PlatformInfo();
+  opalInfo.vertexLayout.elementCount = vertexFormatCount;
+  opalInfo.vertexLayout.pElementFormats = vertexFormats;
 #ifdef QTZ_PLATFORM_WIN32
-  opalInfo.windowPlatformInfo.hinstance = platformInfo.hinstance;
-  opalInfo.windowPlatformInfo.hwnd = platformInfo.hwnd;
-  windowInfo.platformInfo.hinstance = platformInfo.hinstance;
-  windowInfo.platformInfo.hwnd = platformInfo.hwnd;
-#endif // QTZ_PLATFORM_WIN32
+  opalInfo.window.hinstance = platformInfo.hinstance;
+  opalInfo.window.hwnd = platformInfo.hwnd;
+#endif // QTZ_PLATFORM_*
 
   QTZ_ATTEMPT_OPAL(OpalInit(opalInfo));
+
+  OpalWindowInitInfo windowInfo;
+  windowInfo.width = window->Width();
+  windowInfo.height = window->Height();
+#ifdef QTZ_PLATFORM_WIN32
+  windowInfo.platform.hinstance = platformInfo.hinstance;
+  windowInfo.platform.hwnd = platformInfo.hwnd;
+#endif // QTZ_PLATFORM_*
+
   QTZ_ATTEMPT_OPAL(OpalWindowInit(&m_window, windowInfo));
-  OpalImage windowBufferImage;
-  OpalWindowGetBufferImage(m_window, &windowBufferImage);
-  m_windowBufferTexture.usage = 0;
-  m_windowBufferTexture.Init(windowBufferImage);
 
   // ==============================
   // Depth image
   // ==============================
 
-  m_depthTexture.extents = Vec2U{ m_window->extents.width, m_window->extents.height };
+  m_depthTexture.extents = Vec2U{ m_window.width, m_window.height };
   m_depthTexture.filtering = Quartz::Texture_Filter_Linear;
   m_depthTexture.usage = Quartz::Texture_Usage_Framebuffer;
   m_depthTexture.format = Quartz::Texture_Format_Depth;
@@ -101,36 +101,27 @@ QuartzResult Renderer::Init(Window* window)
   // Renderpass
   // ==============================
 
-  const uint32_t attachmentCount = 2;
+  const int attachmentCount = 2;
   OpalAttachmentInfo attachments[attachmentCount];
-  // Window buffer image
+  // Presented image
+  OpalAttachmentUsage presentedImageUsage = Opal_Attachment_Usage_Output;
   attachments[0].clearValue.color = OpalColorValue{ 0.5f, 0.5f, 0.5f, 1.0f };
-  attachments[0].format = Opal_Format_BGR8;
-  attachments[0].loadOp = Opal_Attachment_Op_Clear;
+  attachments[0].format = m_window.imageFormat;
+  attachments[0].loadOp = Opal_Attachment_Load_Op_Clear;
   attachments[0].shouldStore = true;
-  attachments[0].usage = Opal_Attachment_Usage_Color;
+  attachments[0].pSubpassUsages = &presentedImageUsage;
   // Depth image
+  OpalAttachmentUsage depthImageUsage = Opal_Attachment_Usage_Output;
   attachments[1].clearValue.depthStencil = OpalDepthStencilValue{ 1, 0 };
   attachments[1].format = Opal_Format_D24_S8;
-  attachments[1].loadOp = Opal_Attachment_Op_Clear;
-  attachments[1].shouldStore = false;
-  attachments[1].usage = Opal_Attachment_Usage_Depth;
-
-  uint32_t zeroIndex = 0;
-  OpalSubpassInfo subpass;
-  subpass.depthAttachmentIndex = 1;
-  subpass.colorAttachmentCount = 1;
-  subpass.pColorAttachmentIndices = &zeroIndex;
-  subpass.inputAttachmentCount = 0;
-  subpass.pInputColorAttachmentIndices = nullptr;
+  attachments[1].loadOp = Opal_Attachment_Load_Op_Clear;
+  attachments[1].shouldStore = true;
+  attachments[1].pSubpassUsages = &depthImageUsage;
 
   OpalRenderpassInitInfo renderpassInfo;
-  renderpassInfo.dependencyCount = 0;
-  renderpassInfo.pDependencies = nullptr;
-  renderpassInfo.imageCount = attachmentCount;
+  renderpassInfo.attachmentCount = attachmentCount;
   renderpassInfo.pAttachments = attachments;
   renderpassInfo.subpassCount = 1;
-  renderpassInfo.pSubpasses = &subpass;
 
   QTZ_ATTEMPT_OPAL(OpalRenderpassInit(&m_renderpass, renderpassInfo));
 
@@ -138,51 +129,54 @@ QuartzResult Renderer::Init(Window* window)
   // Framebuffer
   // ==============================
 
-  OpalImage framebufferImages[attachmentCount] = { m_windowBufferTexture.m_opalImage, m_depthTexture.m_opalImage };
+  OpalImage* framebufferImages[2];
+  framebufferImages[1] = &m_depthTexture.m_opalImage;
 
   OpalFramebufferInitInfo framebufferInfo;
-  framebufferInfo.imageCount = attachmentCount;
-  framebufferInfo.pImages = framebufferImages;
+  framebufferInfo.imageCount = 2;
   framebufferInfo.renderpass = m_renderpass;
+  framebufferInfo.ppImages = &framebufferImages[0];
 
-  QTZ_ATTEMPT_OPAL(OpalFramebufferInit(&m_framebuffer, framebufferInfo));
+  m_framebuffers.resize(m_window.imageCount);
+  for (int i = 0; i < m_window.imageCount; i++)
+  {
+    framebufferImages[0] = &m_window.pImages[i];
+    QTZ_ATTEMPT_OPAL(OpalFramebufferInit(&m_framebuffers[i], framebufferInfo));
+  }
 
   // ==============================
   // Scene input set
   // ==============================
 
-  OpalBufferInitAlignedInfo sceneBufferInfo = {};
+  OpalBufferInitInfo sceneBufferInfo = {};
+  sceneBufferInfo.size = sizeof(Quartz::ScenePacket);
   sceneBufferInfo.usage = Opal_Buffer_Usage_Uniform;
-  sceneBufferInfo.elementCount = packetElements.size();
-  sceneBufferInfo.pElements = packetElements.data();
 
-  QTZ_ATTEMPT_OPAL(OpalBufferInitAligned(&m_sceneBuffer, sceneBufferInfo));
+  QTZ_ATTEMPT_OPAL(OpalBufferInit(&m_sceneBuffer, sceneBufferInfo));
 
-  OpalInputAccessInfo sceneInputs[1] = {
-    { Opal_Input_Type_Uniform_Buffer, Opal_Stage_All_Graphics }
+  OpalStageFlags sceneInputUsageStages[] = {
+    Opal_Stage_All_Graphics
+  };
+  OpalShaderInputType sceneInputTypes[] = {
+    Opal_Shader_Input_Buffer
   };
 
-  OpalInputLayoutInitInfo sceneLayoutInfo = {};
+  OpalShaderInputLayoutInitInfo sceneLayoutInfo = {};
   sceneLayoutInfo.count = 1;
-  sceneLayoutInfo.pInputs = sceneInputs;
+  sceneLayoutInfo.pStages = sceneInputUsageStages;
+  sceneLayoutInfo.pTypes = sceneInputTypes;
 
-  QTZ_ATTEMPT_OPAL(OpalInputLayoutInit(&m_sceneLayout, sceneLayoutInfo));
+  QTZ_ATTEMPT_OPAL(OpalShaderInputLayoutInit(&m_sceneLayout, sceneLayoutInfo));
 
-  OpalInputValue sceneInputValues[1];
-  sceneInputValues[0].buffer = m_sceneBuffer;
+  OpalShaderInputValue sceneInputValues[] = {
+    {.buffer = &m_sceneBuffer}
+  };
 
-  OpalInputSetInitInfo sceneSetInfo = {};
+  OpalShaderInputInitInfo sceneSetInfo = {};
   sceneSetInfo.layout = m_sceneLayout;
-  sceneSetInfo.pInputValues = sceneInputValues;
+  sceneSetInfo.pValues = sceneInputValues;
 
-  QTZ_ATTEMPT_OPAL(OpalInputSetInit(&m_sceneSet, sceneSetInfo));
-
-  OpalInputInfo inputInfo[1] = {};
-  inputInfo[0].index = 0;
-  inputInfo[0].type = Opal_Input_Type_Uniform_Buffer;
-  inputInfo[0].value.buffer = m_sceneBuffer;
-
-  QTZ_ATTEMPT_OPAL(OpalInputSetUpdate(m_sceneSet, 1, inputInfo));
+  QTZ_ATTEMPT_OPAL(OpalShaderInputInit(&m_sceneSet, sceneSetInfo));
 
   InitImgui();
 
@@ -196,47 +190,48 @@ QuartzResult Renderer::InitImgui()
 
   // Renderpass
 
-  OpalAttachmentInfo attachment = {};
-  attachment.clearValue.color = OpalColorValue{ 0.5f, 0.5f, 0.5f, 1.0f };
-  attachment.format = Opal_Format_BGRA8;
-  attachment.loadOp = Opal_Attachment_Op_Load;
-  attachment.shouldStore = true;
-  attachment.usage = Opal_Attachment_Usage_Presented;
+  const int attachmentCount = 1;
+  OpalAttachmentInfo attachments[attachmentCount];
+  // Presented image
+  OpalAttachmentUsage presentedImageUsage = Opal_Attachment_Usage_Output_Presented;
+  attachments[0].clearValue.color = OpalColorValue{ 0.5f, 0.5f, 0.5f, 1.0f };
+  attachments[0].format = m_window.imageFormat;
+  attachments[0].loadOp = Opal_Attachment_Load_Op_Load;
+  attachments[0].shouldStore = true;
+  attachments[0].pSubpassUsages = &presentedImageUsage;
 
-  uint32_t colorIndex = 0;
-  OpalSubpassInfo subpass = {};
-  subpass.depthAttachmentIndex = OPAL_DEPTH_ATTACHMENT_NONE;
-  subpass.colorAttachmentCount = 1;
-  subpass.pColorAttachmentIndices = &colorIndex;
-  subpass.inputAttachmentCount = 0;
-  subpass.pInputColorAttachmentIndices = NULL;
-
-  OpalRenderpassInitInfo renderpassInfo = {};
-  renderpassInfo.dependencyCount = 0;
-  renderpassInfo.pDependencies = NULL;
-  renderpassInfo.imageCount = 1;
-  renderpassInfo.pAttachments = &attachment;
+  OpalRenderpassInitInfo renderpassInfo;
+  renderpassInfo.attachmentCount = attachmentCount;
+  renderpassInfo.pAttachments = attachments;
   renderpassInfo.subpassCount = 1;
-  renderpassInfo.pSubpasses = &subpass;
+
   QTZ_ATTEMPT_OPAL(OpalRenderpassInit(&m_imguiRenderpass, renderpassInfo));
 
   // Framebuffer
 
-  OpalFramebufferInitInfo fbInfo = {};
-  fbInfo.imageCount = 1;
-  fbInfo.pImages = &m_window->renderBufferImage;
+  OpalFramebufferInitInfo fbInfo;
+  fbInfo.imageCount = attachmentCount;
   fbInfo.renderpass = m_imguiRenderpass;
-  QTZ_ATTEMPT_OPAL(OpalFramebufferInit(&m_imguiFramebuffer, fbInfo));
+
+  m_imguiFramebuffers.resize(m_window.imageCount);
+  for (int i = 0; i < m_window.imageCount; i++)
+  {
+    OpalImage* imagePointer = &m_window.pImages[i];
+    fbInfo.ppImages = &imagePointer;
+    QTZ_ATTEMPT_OPAL(OpalFramebufferInit(&m_imguiFramebuffers[i], fbInfo));
+  }
 
   // Input layout
 
-  OpalInputAccessInfo input = { Opal_Input_Type_Samped_Image, Opal_Stage_Fragment };
+  OpalStageFlags imguiImageUsageFlags = Opal_Stage_Fragment;
+  OpalShaderInputType imguiImageInputType = Opal_Shader_Input_Image;
 
-  OpalInputLayoutInitInfo layoutInfo = {};
+  OpalShaderInputLayoutInitInfo layoutInfo;
   layoutInfo.count = 1;
-  layoutInfo.pInputs = &input;
+  layoutInfo.pStages = &imguiImageUsageFlags;
+  layoutInfo.pTypes = &imguiImageInputType;
 
-  QTZ_ATTEMPT_OPAL(OpalInputLayoutInit(&m_imguiImageLayout, layoutInfo));
+  QTZ_ATTEMPT_OPAL(OpalShaderInputLayoutInit(&m_imguiImageLayout, layoutInfo));
 
   // Imgui
   // ============================================================
@@ -248,38 +243,40 @@ QuartzResult Renderer::InitImgui()
   //ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   ImGui::StyleColorsDark();
 
-  ImGui_ImplWin32_Init(m_window->platform.hwnd);
+  ImGui_ImplWin32_Init(m_qWindow->PlatformInfo().hwnd);
+
+  OpalState* oState = OpalGetState();
 
   ImGui_ImplVulkan_InitInfo imguiVulkanInfo = { 0 };
   imguiVulkanInfo.Allocator = NULL;
-  imguiVulkanInfo.Instance = oState.vk.instance;
-  imguiVulkanInfo.Device = oState.vk.device;
-  imguiVulkanInfo.PhysicalDevice = oState.vk.gpu;
-  imguiVulkanInfo.QueueFamily = oState.vk.gpuInfo.queueIndexGraphics;
-  imguiVulkanInfo.Queue = oState.vk.queueGraphics;
+  imguiVulkanInfo.Instance = oState->api.vk.instance;
+  imguiVulkanInfo.Device = oState->api.vk.device;
+  imguiVulkanInfo.PhysicalDevice = oState->api.vk.gpu.device;
+  imguiVulkanInfo.QueueFamily = oState->api.vk.gpu.queueIndexGraphics;
+  imguiVulkanInfo.Queue = oState->api.vk.queueGraphics;
   imguiVulkanInfo.PipelineCache = VK_NULL_HANDLE;
-  imguiVulkanInfo.DescriptorPool = oState.vk.descriptorPool;
+  imguiVulkanInfo.DescriptorPool = oState->api.vk.descriptorPool;
   imguiVulkanInfo.Subpass = 0;
   imguiVulkanInfo.MinImageCount = 2;
-  imguiVulkanInfo.ImageCount = m_window->imageCount;
+  imguiVulkanInfo.ImageCount = m_window.imageCount;
   imguiVulkanInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
   imguiVulkanInfo.CheckVkResultFn = ImguiVkResultCheck;
-  ImGui_ImplVulkan_Init(&imguiVulkanInfo, m_imguiRenderpass->vk.renderpass);
+  ImGui_ImplVulkan_Init(&imguiVulkanInfo, m_imguiRenderpass.api.vk.renderpass);
 
-  VkCommandBuffer cmd;
-  OpalBeginSingleUseCommand(oState.vk.transientCommandPool, &cmd);
-  ImGui_ImplVulkan_CreateFontsTexture();
-  OpalEndSingleUseCommand(oState.vk.transientCommandPool, oState.vk.queueTransfer, cmd);
+  //QTZ_ATTEMPT_OPAL(OpalRenderBegin());
+  //ImGui_ImplVulkan_CreateFontsTexture();
+  //QTZ_ATTEMPT_OPAL(OpalRenderEnd());
 
   return Quartz_Success;
 }
 
 QuartzResult Renderer::StartFrame()
 {
-  OpalResult result = OpalRenderBeginWindow(m_window);
+  OpalResult result = OpalRenderToWindowBegin(&m_window);
+
   if (result != Opal_Success)
   {
-    if (result == Opal_Window_Minimized)
+    if (result == Opal_Failure_Window_Minimized)
       return Quartz_Success;
     else
       return Quartz_Failure;
@@ -290,28 +287,29 @@ QuartzResult Renderer::StartFrame()
 
 QuartzResult Renderer::EndFrame()
 {
-  QTZ_ATTEMPT_OPAL(OpalRenderEndWindow());
+  QTZ_ATTEMPT_OPAL(OpalRenderToWindowEnd(&m_window));
+  imageIndex = (imageIndex + 1) % m_framebuffers.size();
   return Quartz_Success;
 }
 
 void Renderer::StartSceneRender()
 {
-  OpalRenderBeginRenderpass(m_renderpass, m_framebuffer);
+  OpalRenderRenderpassBegin(&m_renderpass, &m_framebuffers[imageIndex]);
 }
 
 void Renderer::EndSceneRender()
 {
-  OpalRenderEndRenderpass(m_renderpass);
+  OpalRenderRenderpassEnd(&m_renderpass);
 }
 
 void Renderer::StartImguiRender()
 {
-  OpalRenderBeginRenderpass(m_imguiRenderpass, m_imguiFramebuffer);
+  OpalRenderRenderpassBegin(&m_imguiRenderpass, &m_imguiFramebuffers[imageIndex]);
 }
 
 void Renderer::EndImguiRender()
 {
-  OpalRenderEndRenderpass(m_imguiRenderpass);
+  OpalRenderRenderpassEnd(&m_imguiRenderpass);
 }
 
 QuartzResult Renderer::Render(Renderable* renderable)
@@ -325,19 +323,25 @@ QuartzResult Renderer::Render(Renderable* renderable)
 
 void Renderer::Shutdown()
 {
-  OpalWaitIdle();
-  
+  //ImGui_ImplVulkan_DestroyFontsTexture();
   ImGui_ImplVulkan_Shutdown();
-  OpalInputLayoutShutdown(&m_imguiImageLayout);
-  OpalFramebufferShutdown(&m_imguiFramebuffer);
-  OpalRenderpassShutdown(&m_imguiRenderpass);
+  ImGui_ImplWin32_Shutdown();
 
   OpalBufferShutdown(&m_sceneBuffer);
-  OpalInputLayoutShutdown(&m_sceneLayout);
-  OpalInputSetShutdown(&m_sceneSet);
+  OpalShaderInputLayoutShutdown(&m_sceneLayout);
+  OpalShaderInputShutdown(&m_sceneSet);
 
-  OpalFramebufferShutdown(&m_framebuffer);
+  for (int i = 0; i < m_framebuffers.size(); i++)
+  {
+    OpalFramebufferShutdown(&m_imguiFramebuffers[i]);
+    OpalFramebufferShutdown(&m_framebuffers[i]);
+  }
+
+  OpalShaderInputLayoutShutdown(&m_imguiImageLayout);
+  OpalRenderpassShutdown(&m_imguiRenderpass);
+
   OpalRenderpassShutdown(&m_renderpass);
+
   m_depthTexture.Shutdown();
   OpalWindowShutdown(&m_window);
   OpalShutdown();
@@ -345,24 +349,44 @@ void Renderer::Shutdown()
 
 QuartzResult Renderer::PushSceneData(ScenePacket* sceneInfo)
 {
-  QTZ_ATTEMPT_OPAL(OpalBufferAlignAndPushData(m_sceneBuffer, packetElements.size(), packetElements.data(), (void*)sceneInfo));
+  QTZ_ATTEMPT_OPAL(OpalBufferPushData(&m_sceneBuffer, (void*)sceneInfo));
   return Quartz_Success;
 }
 
 QuartzResult Renderer::Resize(uint32_t width, uint32_t height)
 {
-  OpalResult result = OpalWindowReinit(m_window);
-  if (result != Opal_Success)
-  {
-    if (result == Opal_Window_Minimized)
-      return Quartz_Success;
-    else
-      return Quartz_Failure;
-  }
+  OpalWindowShutdown(&m_window);
+  OpalWindowInitInfo windowInfo;
+  windowInfo.height = height;
+  windowInfo.width = width;
+  windowInfo.platform.hwnd = m_qWindow->PlatformInfo().hwnd;
+  windowInfo.platform.hinstance = m_qWindow->PlatformInfo().hinstance;
+  QTZ_ATTEMPT_OPAL(OpalWindowInit(&m_window, windowInfo));
 
-  QTZ_ATTEMPT(m_depthTexture.Resize(Vec2U{ m_window->extents.width, m_window->extents.height }));
-  QTZ_ATTEMPT_OPAL(OpalFramebufferReinit(m_framebuffer));
-  QTZ_ATTEMPT_OPAL(OpalFramebufferReinit(m_imguiFramebuffer));
+  QTZ_ATTEMPT(m_depthTexture.Resize(Vec2U{ m_window.width, m_window.height }));
+
+  OpalImage* framebufferImages[2];
+  framebufferImages[1] = &m_depthTexture.m_opalImage;
+
+  OpalFramebufferInitInfo framebufferInfo;
+  framebufferInfo.ppImages = framebufferImages;
+
+  m_framebuffers.resize(m_window.imageCount);
+  m_imguiFramebuffers.resize(m_window.imageCount);
+  for (int i = 0; i < m_window.imageCount; i++)
+  {
+    framebufferImages[0] = &m_window.pImages[i];
+
+    OpalFramebufferShutdown(&m_framebuffers[i]);
+    OpalFramebufferShutdown(&m_imguiFramebuffers[i]);
+
+    framebufferInfo.renderpass = m_renderpass;
+    framebufferInfo.imageCount = 2;
+    QTZ_ATTEMPT_OPAL(OpalFramebufferInit(&m_framebuffers[i], framebufferInfo));
+    framebufferInfo.renderpass = m_imguiRenderpass;
+    framebufferInfo.imageCount = 1;
+    QTZ_ATTEMPT_OPAL(OpalFramebufferInit(&m_imguiFramebuffers[i], framebufferInfo));
+  }
 
   return Quartz_Success;
 }

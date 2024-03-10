@@ -14,7 +14,7 @@ Material::Material(const std::vector<std::string>& shaderPaths, const std::vecto
   QTZ_ATTEMPT_VOID(Init(shaderPaths, inputs));
 }
 
-QuartzResult Material::Init(ShaderSourceInfo vertInfo, ShaderSourceInfo fragInfo, const std::vector<MaterialInput>& inputs, QuartzPipelineSettingFlags pipelineSettings)
+QuartzResult Material::Init(ShaderSourceInfo vertInfo, ShaderSourceInfo fragInfo, const std::vector<MaterialInput>& inputs, OpalRenderpass renderpass, QuartzPipelineSettingFlags pipelineSettings)
 {
   if (m_isValid)
   {
@@ -23,6 +23,7 @@ QuartzResult Material::Init(ShaderSourceInfo vertInfo, ShaderSourceInfo fragInfo
   }
   m_isBase = true;
   m_pipelineSettings = pipelineSettings;
+  m_renderpass = renderpass;
 
   QTZ_ATTEMPT(InitInputs(inputs));
 
@@ -35,14 +36,9 @@ QuartzResult Material::Init(ShaderSourceInfo vertInfo, ShaderSourceInfo fragInfo
 
   QTZ_ATTEMPT(InitMaterial());
 
-  if (m_renderpass == OPAL_NULL_HANDLE)
-  {
-    m_renderpass = g_coreState.renderer.GetRenderpass();
-  }
   m_inputs = std::vector<MaterialInput>(inputs);
 
   m_isValid = true;
-  return Quartz_Success;
 
   return Quartz_Success;
 }
@@ -56,6 +52,7 @@ QuartzResult Material::Init(const std::vector<std::string>& shaderPaths, const s
   }
   m_isBase = true;
   m_pipelineSettings = pipelineSettings;
+  m_renderpass = g_coreState.renderer.GetRenderpass();
 
   QTZ_ATTEMPT(InitInputs(inputs));
   QTZ_ATTEMPT(InitShaderFiles(shaderPaths));
@@ -67,10 +64,6 @@ QuartzResult Material::Init(const std::vector<std::string>& shaderPaths, const s
     m_shaderPaths[i] = std::string(shaderPaths[i]);
   }
 
-  if (m_renderpass == OPAL_NULL_HANDLE)
-  {
-    m_renderpass = g_coreState.renderer.GetRenderpass();
-  }
   m_inputs = std::vector<MaterialInput>(inputs);
 
   m_isValid = true;
@@ -110,7 +103,9 @@ QuartzResult Material::Init(Material& existingMaterial, const std::vector<Materi
   }
 
   m_isBase = false;
-  m_layout = existingMaterial.m_layout;
+  m_inputLayout = existingMaterial.m_inputLayout;
+  m_group = existingMaterial.m_group;
+  m_renderpass = existingMaterial.m_renderpass;
 
   m_inputs = existingMaterial.m_inputs;
   for (uint32_t i = 0; i < inputs.size(); i++)
@@ -120,19 +115,20 @@ QuartzResult Material::Init(Material& existingMaterial, const std::vector<Materi
 
   QTZ_ATTEMPT(InitInputs(m_inputs));
 
-  m_parent = &existingMaterial;
   m_isValid = true;
   return Quartz_Success;
 }
 
 QuartzResult Material::InitInputs(const std::vector<MaterialInput>& inputs)
 {
-  std::vector<OpalInputAccessInfo> infos(inputs.size());
-  std::vector<OpalInputValue> values(inputs.size());
+  std::vector<OpalStageFlags> stages(inputs.size());
+  std::vector<OpalShaderInputType> types(inputs.size());
+  std::vector<OpalShaderInputValue> values(inputs.size());
+  
 
-  for (uint32_t i = 0; i < values.size(); i++)
+  for (uint32_t i = 0; i < inputs.size(); i++)
   {
-    infos[i].stages = Opal_Stage_All_Graphics;
+    stages[i] = Opal_Stage_All;
 
     switch (inputs[i].type)
     {
@@ -144,8 +140,8 @@ QuartzResult Material::InitInputs(const std::vector<MaterialInput>& inputs)
         return Quartz_Failure;
       }
 
-      values[i].image = inputs[i].value.texture->m_opalImage;
-      infos[i].type = Opal_Input_Type_Samped_Image;
+      types[i] = Opal_Shader_Input_Image;
+      values[i].image = &inputs[i].value.texture->m_opalImage;
     } break;
     case Input_Buffer:
     {
@@ -155,27 +151,28 @@ QuartzResult Material::InitInputs(const std::vector<MaterialInput>& inputs)
         return Quartz_Failure;
       }
 
-      values[i].buffer = inputs[i].value.buffer->m_opalBuffer;
-      infos[i].type = Opal_Input_Type_Uniform_Buffer;
+      types[i] = Opal_Shader_Input_Buffer;
+      values[i].buffer = &inputs[i].value.buffer->m_opalBuffer;
     } break;
     default: return Quartz_Failure;
     }
   }
 
-  if (m_isBase && m_layout == OPAL_NULL_HANDLE)
+  if (m_isBase)
   {
-    OpalInputLayoutInitInfo layoutInfo;
-    layoutInfo.count = infos.size();
-    layoutInfo.pInputs = infos.data();
+    OpalShaderInputLayoutInitInfo layoutInfo;
+    layoutInfo.count = inputs.size();
+    layoutInfo.pStages = stages.data();
+    layoutInfo.pTypes = types.data();
 
-    QTZ_ATTEMPT_OPAL(OpalInputLayoutInit(&m_layout, layoutInfo));
+    QTZ_ATTEMPT_OPAL(OpalShaderInputLayoutInit(&m_inputLayout, layoutInfo));
   }
 
-  OpalInputSetInitInfo setInfo;
-  setInfo.layout = m_layout;
-  setInfo.pInputValues = values.data();
+  OpalShaderInputInitInfo setInfo;
+  setInfo.layout = m_inputLayout;
+  setInfo.pValues = values.data();
 
-  QTZ_ATTEMPT_OPAL(OpalInputSetInit(&m_set, setInfo));
+  QTZ_ATTEMPT_OPAL(OpalShaderInputInit(&m_inputSet, setInfo));
   return Quartz_Success;
 }
 
@@ -204,8 +201,8 @@ QuartzResult Material::InitShader(uint32_t size, const void* source, OpalShaderT
 {
   OpalShaderInitInfo info;
   info.type = type;
-  info.size = size;
-  info.pSource = (const char*)source;
+  info.sourceSize = size;
+  info.pSource = source;
 
   QTZ_ATTEMPT_OPAL(OpalShaderInit(outShader, info));
   return Quartz_Success;
@@ -214,31 +211,22 @@ QuartzResult Material::InitShader(uint32_t size, const void* source, OpalShaderT
 QuartzResult Material::InitMaterial()
 {
   const uint32_t layoutCount = 2;
-  OpalInputLayout layouts[layoutCount] = {
+  OpalShaderInputLayout layouts[layoutCount] = {
     Renderer::SceneLayout(),
-    m_layout
+    m_inputLayout
   };
 
-  OpalMaterialInitInfo materialInfo;
-  if (m_renderpass == OPAL_NULL_HANDLE)
-  {
-    materialInfo.renderpass = g_coreState.renderer.GetRenderpass();
-  }
-  else
-  {
-    materialInfo.renderpass = m_renderpass;
-  }
-  materialInfo.subpassIndex = 0;
-  materialInfo.inputLayoutCount = layoutCount;
-  materialInfo.pInputLayouts = layouts;
-  materialInfo.shaderCount = m_shaders.size();
-  materialInfo.pShaders = m_shaders.data();
-  materialInfo.pushConstantSize = sizeof(Mat4);
+  OpalShaderGroupInitInfo initInfo;
+  initInfo.renderpass = m_renderpass;
+  initInfo.subpassIndex = 0;
+  initInfo.shaderInputLayoutCount = layoutCount;
+  initInfo.pShaderInputLayouts = layouts;
+  initInfo.shaderCount = m_shaders.size();
+  initInfo.pShaders = m_shaders.data();
+  initInfo.pushConstantSize = sizeof(Mat4);
+  initInfo.flags = (OpalPipelineFlags)m_pipelineSettings;
 
-  materialInfo.pipelineSettings = (OpalPipelineSettingFlags)m_pipelineSettings;
-
-
-  QTZ_ATTEMPT_OPAL(OpalMaterialInit(&m_material, materialInfo));
+  QTZ_ATTEMPT_OPAL(OpalShaderGroupInit(&m_group, initInfo));
 
   return Quartz_Success;
 }
@@ -251,11 +239,9 @@ QuartzResult Material::Bind() const
     return Quartz_Failure;
   }
 
-  OpalMaterial mat = (m_isBase) ? m_material : m_parent->m_material;
-
-  OpalRenderBindMaterial(mat);
-  OpalRenderBindInputSet(Renderer::SceneSet(), 0);
-  OpalRenderBindInputSet(m_set, 1);
+  OpalRenderBindShaderGroup(&m_group);
+  OpalRenderBindShaderInput(Renderer::SceneSet(), 0);
+  OpalRenderBindShaderInput(&m_inputSet, 1);
 
   return Quartz_Success;
 }
@@ -281,46 +267,40 @@ void Material::Shutdown()
   {
     return;
   }
+  OpalWaitIdle();
 
   if (m_isBase)
   {
-    OpalMaterialShutdown(&m_material);
+    OpalShaderGroupShutdown(&m_group);
     for (uint32_t i = 0; i < m_shaders.size(); i++)
     {
       OpalShaderShutdown(&m_shaders[i]);
     }
 
-    OpalInputLayoutShutdown(&m_layout);
+    OpalShaderInputLayoutShutdown(&m_inputLayout);
   }
 
-  OpalInputSetShutdown(&m_set);
+  OpalShaderInputShutdown(&m_inputSet);
 
   m_isValid = false;
 }
 
 QuartzResult Material::Reload()
 {
-  if (!m_isValid)
+  if (!m_isValid || !m_isBase)
   {
     QTZ_WARNING("Attempting to reload an invalid material");
     return Quartz_Success;
   }
 
-  if (!m_isBase)
-  {
-    m_parent->Reload();
-  }
-  else
-  {
-    OpalWaitIdle();
+  OpalWaitIdle();
 
-    OpalMaterialShutdown(&m_material);
-    if (m_shaderPaths.size() > 0)
-    {
-      QTZ_ATTEMPT(InitShaderFiles(m_shaderPaths));
-    }
-    QTZ_ATTEMPT(InitMaterial());
+  OpalShaderGroupShutdown(&m_group);
+  if (m_shaderPaths.size() > 0)
+  {
+    QTZ_ATTEMPT(InitShaderFiles(m_shaderPaths));
   }
+  QTZ_ATTEMPT(InitMaterial());
 
   return Quartz_Success;
 }
@@ -333,7 +313,9 @@ QuartzResult Material::UpdateInputs()
     return Quartz_Failure;
   }
 
-  OpalInputSetShutdown(&m_set);
+  OpalWaitIdle();
+  OpalShaderInputShutdown(&m_inputSet);
+  OpalShaderInputLayoutShutdown(&m_inputLayout);
   QTZ_ATTEMPT(InitInputs(m_inputs));
   return Quartz_Success;
 }

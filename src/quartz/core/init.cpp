@@ -17,9 +17,9 @@ uint32_t g_quartzAttemptDepth;
 // Quartz entrypoint
 // ============================================================
 
-void Run()
+void Run(QuartzInitInfo initInfo)
 {
-  QTZ_ATTEMPT_VOID(CoreInit());
+  QTZ_ATTEMPT_VOID(CoreInit(initInfo));
   QTZ_ATTEMPT_VOID(CoreMainLoop());
   CoreShutdown();
 }
@@ -28,7 +28,7 @@ void Run()
 // ============================================================
 
 // Platform
-QuartzResult InitWindow();
+QuartzResult InitWindow(QuartzInitInfo initInfo);
 // Rendering
 QuartzResult InitRenderer();
 // Engine
@@ -39,11 +39,11 @@ QuartzResult InitLayers();
 // Core
 // ============================================================
 
-QuartzResult CoreInit()
+QuartzResult CoreInit(QuartzInitInfo initInfo)
 {
   Logger::Init();
 
-  QTZ_ATTEMPT(InitWindow());
+  QTZ_ATTEMPT(InitWindow(initInfo));
   QTZ_ATTEMPT(InitRenderer());
   // init resource pools
 
@@ -63,14 +63,14 @@ QuartzResult CoreInit()
 // Platform
 // ============================================================
 
-QuartzResult InitWindow()
+QuartzResult InitWindow(QuartzInitInfo initInfo)
 {
   WindowInitInfo windowInfo = {};
-  windowInfo.width = 1280;
-  windowInfo.height = 720;
-  windowInfo.posX = 600;
-  windowInfo.posY = 300;
-  windowInfo.title = "Test new window";
+  windowInfo.width = initInfo.window.extents.width;
+  windowInfo.height = initInfo.window.extents.height;
+  windowInfo.posX = initInfo.window.position.x;
+  windowInfo.posY = initInfo.window.position.y;
+  windowInfo.title = initInfo.window.title;
   windowInfo.eventCallbackFunction = EventCallback;
 
   QTZ_ATTEMPT(g_coreState.mainWindow.Init(windowInfo));

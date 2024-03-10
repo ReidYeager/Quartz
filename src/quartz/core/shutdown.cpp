@@ -6,6 +6,8 @@ namespace Quartz
 
 void CoreShutdown()
 {
+  OpalWaitIdle();
+
   g_coreState.clientApp->Shutdown();
   delete g_coreState.clientApp;
 

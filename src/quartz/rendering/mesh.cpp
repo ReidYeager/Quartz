@@ -262,7 +262,7 @@ void Mesh::Render() const
     return;
   }
 
-  OpalRenderMesh(m_opalMesh);
+  OpalRenderMesh(&m_opalMesh);
 }
 
 } // namespace Quartz

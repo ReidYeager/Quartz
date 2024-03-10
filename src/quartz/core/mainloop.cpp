@@ -146,9 +146,9 @@ QuartzResult UpdatePacket()
 
   uint32_t pointIndex = 0;
   ObjectIterator lightPointIter({ g_coreState.ecsIds.lightPoint });
-  while (!lightPointIter.AtEnd() && pointIndex < 4)
+  while (!lightPointIter.AtEnd() && pointIndex < QTZ_LIGHT_POINT_MAX_COUNT)
   {
-    g_packet.lights.pPoints[pointIndex] = *lightPointIter.Get<LightPoint>();
+    memcpy((void*)&g_packet.lights.pPoints[pointIndex], (void*)lightPointIter.Get<LightPoint>(), sizeof(LightPoint));
     pointIndex++;
     lightPointIter.NextElement();
   }
@@ -156,9 +156,9 @@ QuartzResult UpdatePacket()
 
   uint32_t spotIndex = 0;
   ObjectIterator lightSpotIter({ g_coreState.ecsIds.lightSpot });
-  while (!lightSpotIter.AtEnd() && spotIndex < 2)
+  while (!lightSpotIter.AtEnd() && spotIndex < QTZ_LIGHT_SPOT_MAX_COUNT)
   {
-    g_packet.lights.pSpots[spotIndex] = *lightSpotIter.Get<LightSpot>();
+    memcpy((void*)&g_packet.lights.pSpots[spotIndex], (void*)lightSpotIter.Get<LightSpot>(), sizeof(LightSpot));
     spotIndex++;
     lightSpotIter.NextElement();
   }
@@ -236,7 +236,7 @@ QuartzResult RenderImgui()
   ImGui::EndFrame();
   ImGui::Render();
   ImDrawData* drawData = ImGui::GetDrawData();
-  ImGui_ImplVulkan_RenderDrawData(drawData, OpalRenderGetCommandBuffer());
+  ImGui_ImplVulkan_RenderDrawData(drawData, OpalGetState()->api.vk.renderState.cmd);
   g_coreState.renderer.EndImguiRender();
 
   return Quartz_Success;

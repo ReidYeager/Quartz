@@ -48,7 +48,7 @@ QuartzResult Buffer::PushData(void* data)
     return Quartz_Failure;
   }
 
-  QTZ_ATTEMPT_OPAL(OpalBufferPushData(m_opalBuffer, data));
+  QTZ_ATTEMPT_OPAL(OpalBufferPushData(&m_opalBuffer, data));
   return Quartz_Success;
 }
 

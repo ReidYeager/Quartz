@@ -38,7 +38,7 @@ struct Vertex
   }
 };
 
-struct LightDirectional
+struct alignas(16) LightDirectional
 {
   Vec3 color;
   float intensity;
@@ -46,7 +46,7 @@ struct LightDirectional
 };
 #define QTZ_LIGHT_DIRECTIONAL_MAX_COUNT 1
 
-struct LightPoint
+struct alignas(16) LightPoint
 {
   Vec3 color;
   float intensity;
@@ -54,11 +54,12 @@ struct LightPoint
 };
 #define QTZ_LIGHT_POINT_MAX_COUNT 4
 
-struct LightSpot
+struct alignas(16) LightSpot
 {
   Vec3 color;
   float intensity;
   Vec3 position;
+  int pad0;
   Vec3 direction;
 
   float inner;

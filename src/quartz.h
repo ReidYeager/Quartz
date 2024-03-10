@@ -15,19 +15,13 @@
 namespace Quartz {
 
 // Entry
-void Run();
+void Run(QuartzInitInfo initInfo);
 // Core
 void RequestQuit();
 double DeltaTime(); // Previous frame's delta time
 double Time();      // Total real time
 uint32_t WindowWidth();
 uint32_t WindowHeight();
-
-void SetHdri(Texture& image);
-QuartzResult ConvolveHdri();
-Texture& GetDiffuseHdri();
-Texture& GetSpecularHdri();
-Texture& GetSpecularBrdf();
 
 } // namespace Quartz
 
@@ -36,7 +30,7 @@ Texture& GetSpecularBrdf();
 
 extern Quartz::Application* GetClientApplication();
 
-#define QUARTZ_ENTRY(ApplicationClass)                            \
+#define QUARTZ_ENTRY(ApplicationClass, defaultSettings)           \
 Quartz::Application* GetClientApplication()                       \
 {                                                                 \
   static Quartz::Application* clientApp = new ApplicationClass(); \
@@ -44,6 +38,6 @@ Quartz::Application* GetClientApplication()                       \
 }                                                                 \
 int main()                                                        \
 {                                                                 \
-  Quartz::Run();                                                  \
+  Quartz::Run(defaultSettings);                                   \
   return 0;                                                       \
 }

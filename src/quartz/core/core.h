@@ -61,7 +61,7 @@ extern CoreState g_coreState;
 // Functions
 // ============================================================
 
-QuartzResult CoreInit();
+QuartzResult CoreInit(QuartzInitInfo initInfo);
 QuartzResult CoreMainLoop();
 void CoreShutdown();
 

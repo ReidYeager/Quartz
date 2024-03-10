@@ -41,6 +41,7 @@ enum TextureFormat
 
 enum TextureUsageFlagBits
 {
+  Texture_Usage_Unused = 0,
   Texture_Usage_Shader_Input = 0x01,
   Texture_Usage_Framebuffer = 0x02
 };
@@ -50,24 +51,23 @@ class Texture
 {
 friend class Renderer;
 friend class Material;
-friend void SetHdri(Quartz::Texture& image);
 friend class TextureSkybox;
 
   // Variables
   // ============================================================
 
 public:
-  TextureFormat     format     = Texture_Format_RGBA8;
-  TextureUsageFlags usage      = Texture_Usage_Shader_Input;
-  TextureFilterMode filtering  = Texture_Filter_Linear;
-  TextureSampleMode sampleMode = Texture_Sample_Wrap;
-  uint32_t          mipLevels  = 0;
-  Vec2U             extents    = Vec2U{ 1, 1 };
+  TextureFormat        format       = Texture_Format_RGBA8;
+  TextureUsageFlags    usage        = Texture_Usage_Shader_Input;
+  TextureFilterMode    filtering    = Texture_Filter_Linear;
+  TextureSampleMode    sampleMode   = Texture_Sample_Wrap;
+  uint32_t             mipLevels    = 0;
+  Vec2U                extents      = Vec2U{ 1, 1 };
 
 private:
-  OpalImage    m_opalImage = OPAL_NULL_HANDLE;
-  OpalInputSet m_inputSet  = OPAL_NULL_HANDLE;
-  bool         m_isValid   = false;
+  OpalImage         m_opalImage;
+  OpalShaderInput   m_inputSet;
+  bool              m_isValid   = false;
 
   // Functions
   // ============================================================
@@ -93,10 +93,8 @@ public:
     }
     m_isValid = false;
 
-    if (m_opalImage != OPAL_NULL_HANDLE)
-      OpalImageShutdown(&m_opalImage);
-    if (m_inputSet != OPAL_NULL_HANDLE)
-      OpalInputSetShutdown(&m_inputSet);
+    OpalImageShutdown(&m_opalImage);
+    OpalShaderInputShutdown(&m_inputSet);
   }
 
   inline bool IsValid() const
@@ -106,15 +104,15 @@ public:
 
   inline void* ForImgui() const
   {
-    if (!m_isValid || m_inputSet == OPAL_NULL_HANDLE)
+    if (!m_isValid || (usage & Texture_Usage_Shader_Input) == 0)
     {
       QTZ_ERROR("Attempting to use invalid image for imgui");
       return nullptr;
     }
-    return (void*)m_inputSet->vk.descriptorSet;
+    return (void*)m_inputSet.api.vk.set;
   }
 
-  uint64_t Dump_Debug(void** outData) const;
+  //uint64_t Dump_Debug(void** outData) const;
 
 private:
   QuartzResult Init(OpalImage opalImage);

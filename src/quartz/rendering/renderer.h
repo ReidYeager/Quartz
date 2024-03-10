@@ -13,12 +13,12 @@
 namespace Quartz
 {
 
-struct ScenePacket
+struct alignas(16) ScenePacket
 {
   Mat4 viewProjectionMatrix;
-  Vec3 camPos;
-  Vec3 camForward;
-  Vec3 ambientColor;
+  Vec3 camPos; int pad0;
+  Vec3 camForward; int pad1;
+  Vec3 ambientColor; int pad2;
 
   struct
   {
@@ -32,58 +32,58 @@ struct ScenePacket
   } lights;
 };
 
-static const std::vector<OpalBufferElement> packetElements = {
-  Opal_Buffer_Mat4,   /*ViewProj*/
-
-  Opal_Buffer_Float3, /*CamPos*/
-  Opal_Buffer_Float3, /*CamFwd*/
-  Opal_Buffer_Float3, /*Ambient color*/
-
-  Opal_Buffer_Float3, /*Directional - color*/
-  Opal_Buffer_Float,  /*Directional - intensity*/
-  Opal_Buffer_Float3, /*Directional - direction*/
-  Opal_Buffer_Structure_End,
-
-  Opal_Buffer_Uint, /*Point count*/
-
-  Opal_Buffer_Float3, /*Point - color*/
-  Opal_Buffer_Float,  /*Point - intensity*/
-  Opal_Buffer_Float3, /*Point - position*/
-  Opal_Buffer_Structure_End,
-
-  Opal_Buffer_Float3, /*Point - color*/
-  Opal_Buffer_Float,  /*Point - intensity*/
-  Opal_Buffer_Float3, /*Point - position*/
-  Opal_Buffer_Structure_End,
-
-  Opal_Buffer_Float3, /*Point - color*/
-  Opal_Buffer_Float,  /*Point - intensity*/
-  Opal_Buffer_Float3, /*Point - position*/
-  Opal_Buffer_Structure_End,
-
-  Opal_Buffer_Float3, /*Point - color*/
-  Opal_Buffer_Float,  /*Point - intensity*/
-  Opal_Buffer_Float3, /*Point - position*/
-  Opal_Buffer_Structure_End,
-
-  Opal_Buffer_Uint, /*Spot count*/
-
-  Opal_Buffer_Float3, /*Spot - color*/
-  Opal_Buffer_Float,  /*Spot - intensity*/
-  Opal_Buffer_Float3, /*Spot - position*/
-  Opal_Buffer_Float3, /*Spot - direction*/
-  Opal_Buffer_Float,  /*Spot - inner*/
-  Opal_Buffer_Float,  /*Spot - outer*/
-  Opal_Buffer_Structure_End,
-
-  Opal_Buffer_Float3, /*Spot - color*/
-  Opal_Buffer_Float,  /*Spot - intensity*/
-  Opal_Buffer_Float3, /*Spot - position*/
-  Opal_Buffer_Float3, /*Spot - direction*/
-  Opal_Buffer_Float,  /*Spot - inner*/
-  Opal_Buffer_Float,  /*Spot - outer*/
-  Opal_Buffer_Structure_End,
-};
+//static const std::vector<OpalBufferElement> packetElements = {
+//  Opal_Buffer_Mat4,   /*ViewProj*/
+//
+//  Opal_Buffer_Float3, /*CamPos*/
+//  Opal_Buffer_Float3, /*CamFwd*/
+//  Opal_Buffer_Float3, /*Ambient color*/
+//
+//  Opal_Buffer_Float3, /*Directional - color*/
+//  Opal_Buffer_Float,  /*Directional - intensity*/
+//  Opal_Buffer_Float3, /*Directional - direction*/
+//  Opal_Buffer_Structure_End,
+//
+//  Opal_Buffer_Uint, /*Point count*/
+//
+//  Opal_Buffer_Float3, /*Point - color*/
+//  Opal_Buffer_Float,  /*Point - intensity*/
+//  Opal_Buffer_Float3, /*Point - position*/
+//  Opal_Buffer_Structure_End,
+//
+//  Opal_Buffer_Float3, /*Point - color*/
+//  Opal_Buffer_Float,  /*Point - intensity*/
+//  Opal_Buffer_Float3, /*Point - position*/
+//  Opal_Buffer_Structure_End,
+//
+//  Opal_Buffer_Float3, /*Point - color*/
+//  Opal_Buffer_Float,  /*Point - intensity*/
+//  Opal_Buffer_Float3, /*Point - position*/
+//  Opal_Buffer_Structure_End,
+//
+//  Opal_Buffer_Float3, /*Point - color*/
+//  Opal_Buffer_Float,  /*Point - intensity*/
+//  Opal_Buffer_Float3, /*Point - position*/
+//  Opal_Buffer_Structure_End,
+//
+//  Opal_Buffer_Uint, /*Spot count*/
+//
+//  Opal_Buffer_Float3, /*Spot - color*/
+//  Opal_Buffer_Float,  /*Spot - intensity*/
+//  Opal_Buffer_Float3, /*Spot - position*/
+//  Opal_Buffer_Float3, /*Spot - direction*/
+//  Opal_Buffer_Float,  /*Spot - inner*/
+//  Opal_Buffer_Float,  /*Spot - outer*/
+//  Opal_Buffer_Structure_End,
+//
+//  Opal_Buffer_Float3, /*Spot - color*/
+//  Opal_Buffer_Float,  /*Spot - intensity*/
+//  Opal_Buffer_Float3, /*Spot - position*/
+//  Opal_Buffer_Float3, /*Spot - direction*/
+//  Opal_Buffer_Float,  /*Spot - inner*/
+//  Opal_Buffer_Float,  /*Spot - outer*/
+//  Opal_Buffer_Structure_End,
+//};
 
 class Renderer
 {
@@ -100,14 +100,14 @@ public:
 
   QuartzResult Render(Renderable* renderable);
 
-  static OpalInputLayout SceneLayout() { return m_sceneLayout; }
-  static OpalInputSet SceneSet() { return m_sceneSet; }
+  static OpalShaderInputLayout SceneLayout() { return m_sceneLayout; }
+  static OpalShaderInput* SceneSet() { return &m_sceneSet; }
 
   QuartzResult PushSceneData(ScenePacket* sceneInfo);
 
   QuartzResult Resize(uint32_t width, uint32_t height);
 
-  OpalInputLayout GetSingleImageLayout() const { return m_imguiImageLayout; }
+  OpalShaderInputLayout GetSingleImageLayout() const { return m_imguiImageLayout; }
   OpalRenderpass GetRenderpass() const { return m_renderpass; } // TODO : Replace for flexibility
 
 private:
@@ -120,16 +120,18 @@ private:
   Texture m_windowBufferTexture;
   Texture m_depthTexture;
 
-  OpalRenderpass m_renderpass;
-  OpalFramebuffer m_framebuffer;
+  uint32_t imageIndex;
 
-  static OpalInputLayout m_sceneLayout;
-  static OpalInputSet m_sceneSet;
+  OpalRenderpass m_renderpass;
+  std::vector<OpalFramebuffer> m_framebuffers;
+
+  static OpalShaderInputLayout m_sceneLayout;
+  static OpalShaderInput m_sceneSet;
   OpalBuffer m_sceneBuffer;
 
   OpalRenderpass m_imguiRenderpass;
-  OpalFramebuffer m_imguiFramebuffer;
-  OpalInputLayout m_imguiImageLayout;
+  std::vector<OpalFramebuffer> m_imguiFramebuffers;
+  OpalShaderInputLayout m_imguiImageLayout;
 };
 
 } // namespace Quartz
