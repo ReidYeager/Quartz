@@ -59,7 +59,7 @@ struct alignas(16) LightSpot
   Vec3 color;
   float intensity;
   Vec3 position;
-  int pad0;
+  char _pad0[4];
   Vec3 direction;
 
   float inner;

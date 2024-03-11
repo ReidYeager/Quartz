@@ -298,6 +298,10 @@ QuartzResult Material::Reload()
   OpalShaderGroupShutdown(&m_group);
   if (m_shaderPaths.size() > 0)
   {
+    for (int i = 0; i < m_shaderPaths.size(); i++)
+    {
+      OpalShaderShutdown(&m_shaders[i]);
+    }
     QTZ_ATTEMPT(InitShaderFiles(m_shaderPaths));
   }
   QTZ_ATTEMPT(InitMaterial());
