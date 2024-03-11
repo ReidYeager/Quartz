@@ -261,7 +261,8 @@ QuartzResult Renderer::InitImgui()
   imguiVulkanInfo.ImageCount = m_window.imageCount;
   imguiVulkanInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
   imguiVulkanInfo.CheckVkResultFn = ImguiVkResultCheck;
-  ImGui_ImplVulkan_Init(&imguiVulkanInfo, m_imguiRenderpass.api.vk.renderpass);
+  imguiVulkanInfo.RenderPass = m_imguiRenderpass.api.vk.renderpass;
+  ImGui_ImplVulkan_Init(&imguiVulkanInfo);
 
   //QTZ_ATTEMPT_OPAL(OpalRenderBegin());
   //ImGui_ImplVulkan_CreateFontsTexture();

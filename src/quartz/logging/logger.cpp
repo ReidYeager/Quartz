@@ -1,7 +1,7 @@
 
 #include "quartz/logging/logger.h"
 
-#include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/sinks/stdout_sinks.h"
 
 namespace Quartz
 {
