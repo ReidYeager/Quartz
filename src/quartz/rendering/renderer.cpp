@@ -25,22 +25,10 @@ void OpalMessageCallback(OpalMessageType type, const char* message)
   {
     //QTZ_INFO("Opal : {}", message);
   } break;
-  //case Opal_Message_Debug:
-  //{
-  //  QTZ_DEBUG("Opal : {}", message);
-  //} break;
-  //case Opal_Message_Warning:
-  //{
-  //  QTZ_WARNING("Opal : {}", message);
-  //} break;
   case Opal_Message_Error:
   {
     QTZ_ERROR("Opal : {}", message);
   } break;
-  //case Opal_Message_Fatal:
-  //{
-  //  QTZ_FATAL("Opal : {}", message);
-  //} break;
   default: break;
   }
 }
@@ -104,7 +92,7 @@ QuartzResult Renderer::Init(Window* window)
   const int attachmentCount = 2;
   OpalAttachmentInfo attachments[attachmentCount];
   // Presented image
-  OpalAttachmentUsage presentedImageUsage = Opal_Attachment_Usage_Output;
+  OpalAttachmentUsage presentedImageUsage = Opal_Attachment_Usage_Output_Presented;
   attachments[0].clearValue.color = OpalColorValue{ 0.5f, 0.5f, 0.5f, 1.0f };
   attachments[0].format = m_window.imageFormat;
   attachments[0].loadOp = Opal_Attachment_Load_Op_Clear;
@@ -252,7 +240,7 @@ QuartzResult Renderer::InitImgui()
   imguiVulkanInfo.Instance = oState->api.vk.instance;
   imguiVulkanInfo.Device = oState->api.vk.device;
   imguiVulkanInfo.PhysicalDevice = oState->api.vk.gpu.device;
-  imguiVulkanInfo.QueueFamily = oState->api.vk.gpu.queueIndexGraphics;
+  imguiVulkanInfo.QueueFamily = oState->api.vk.gpu.queueIndexGraphicsCompute;
   imguiVulkanInfo.Queue = oState->api.vk.queueGraphics;
   imguiVulkanInfo.PipelineCache = VK_NULL_HANDLE;
   imguiVulkanInfo.DescriptorPool = oState->api.vk.descriptorPool;
@@ -351,6 +339,7 @@ void Renderer::Shutdown()
 QuartzResult Renderer::PushSceneData(ScenePacket* sceneInfo)
 {
   QTZ_ATTEMPT_OPAL(OpalBufferPushData(&m_sceneBuffer, (void*)sceneInfo));
+  OpalWaitIdle(); // TODO : Remove on Opal synchronization rework
   return Quartz_Success;
 }
 

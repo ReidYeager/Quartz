@@ -217,14 +217,15 @@ QuartzResult Material::InitMaterial()
   };
 
   OpalShaderGroupInitInfo initInfo;
-  initInfo.renderpass = m_renderpass;
-  initInfo.subpassIndex = 0;
+  initInfo.type = Opal_Group_Graphics;
+  initInfo.graphics.renderpass = m_renderpass;
+  initInfo.graphics.subpassIndex = 0;
+  initInfo.graphics.flags = (OpalPipelineFlags)m_pipelineSettings;
   initInfo.shaderInputLayoutCount = layoutCount;
   initInfo.pShaderInputLayouts = layouts;
   initInfo.shaderCount = m_shaders.size();
   initInfo.pShaders = m_shaders.data();
   initInfo.pushConstantSize = sizeof(Mat4);
-  initInfo.flags = (OpalPipelineFlags)m_pipelineSettings;
 
   QTZ_ATTEMPT_OPAL(OpalShaderGroupInit(&m_group, initInfo));
 

@@ -11,7 +11,7 @@ std::shared_ptr<spdlog::logger> Logger::appLogger;
 
 void Logger::Init()
 {
-  spdlog::set_pattern("%^[%T.%e] %2L : %6n :-: %v%$");
+  spdlog::set_pattern("%^[%T.%e] %L : %n :-: %v%$");
   coreLogger = spdlog::stdout_color_mt("Quartz");
   appLogger = spdlog::stdout_color_mt("App");
 

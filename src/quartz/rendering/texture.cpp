@@ -285,8 +285,9 @@ QuartzResult Texture::InitOpalImage()
   info.mipCount = mipLevels;
 
   info.usage |= ((usage & Texture_Usage_Shader_Input) != 0) * Opal_Image_Usage_Uniform;
-  info.usage |= ((usage & Texture_Usage_Framebuffer) != 0) * (format == Texture_Format_Depth ? Opal_Image_Usage_Depth : Opal_Image_Usage_Color);
-  info.usage |= Opal_Image_Usage_Copy_Src;
+  info.usage |= ((usage & Texture_Usage_Framebuffer) != 0) * Opal_Image_Usage_Output;
+  info.usage |= Opal_Image_Usage_Transfer_Dst;
+  info.usage |= (info.mipCount > 1) * Opal_Image_Usage_Transfer_Src;
 
   switch (format)
   {

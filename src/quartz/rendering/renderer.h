@@ -16,9 +16,9 @@ namespace Quartz
 struct alignas(16) ScenePacket
 {
   Mat4 viewProjectionMatrix;
-  Vec3 camPos; int pad0;
-  Vec3 camForward; int pad1;
-  Vec3 ambientColor; int pad2;
+  Vec3 camPos; int _pad0;
+  Vec3 camForward; int _pad1;
+  Vec3 ambientColor; int _pad2;
 
   struct
   {
@@ -31,59 +31,6 @@ struct alignas(16) ScenePacket
     LightSpot pSpots[QTZ_LIGHT_SPOT_MAX_COUNT];
   } lights;
 };
-
-//static const std::vector<OpalBufferElement> packetElements = {
-//  Opal_Buffer_Mat4,   /*ViewProj*/
-//
-//  Opal_Buffer_Float3, /*CamPos*/
-//  Opal_Buffer_Float3, /*CamFwd*/
-//  Opal_Buffer_Float3, /*Ambient color*/
-//
-//  Opal_Buffer_Float3, /*Directional - color*/
-//  Opal_Buffer_Float,  /*Directional - intensity*/
-//  Opal_Buffer_Float3, /*Directional - direction*/
-//  Opal_Buffer_Structure_End,
-//
-//  Opal_Buffer_Uint, /*Point count*/
-//
-//  Opal_Buffer_Float3, /*Point - color*/
-//  Opal_Buffer_Float,  /*Point - intensity*/
-//  Opal_Buffer_Float3, /*Point - position*/
-//  Opal_Buffer_Structure_End,
-//
-//  Opal_Buffer_Float3, /*Point - color*/
-//  Opal_Buffer_Float,  /*Point - intensity*/
-//  Opal_Buffer_Float3, /*Point - position*/
-//  Opal_Buffer_Structure_End,
-//
-//  Opal_Buffer_Float3, /*Point - color*/
-//  Opal_Buffer_Float,  /*Point - intensity*/
-//  Opal_Buffer_Float3, /*Point - position*/
-//  Opal_Buffer_Structure_End,
-//
-//  Opal_Buffer_Float3, /*Point - color*/
-//  Opal_Buffer_Float,  /*Point - intensity*/
-//  Opal_Buffer_Float3, /*Point - position*/
-//  Opal_Buffer_Structure_End,
-//
-//  Opal_Buffer_Uint, /*Spot count*/
-//
-//  Opal_Buffer_Float3, /*Spot - color*/
-//  Opal_Buffer_Float,  /*Spot - intensity*/
-//  Opal_Buffer_Float3, /*Spot - position*/
-//  Opal_Buffer_Float3, /*Spot - direction*/
-//  Opal_Buffer_Float,  /*Spot - inner*/
-//  Opal_Buffer_Float,  /*Spot - outer*/
-//  Opal_Buffer_Structure_End,
-//
-//  Opal_Buffer_Float3, /*Spot - color*/
-//  Opal_Buffer_Float,  /*Spot - intensity*/
-//  Opal_Buffer_Float3, /*Spot - position*/
-//  Opal_Buffer_Float3, /*Spot - direction*/
-//  Opal_Buffer_Float,  /*Spot - inner*/
-//  Opal_Buffer_Float,  /*Spot - outer*/
-//  Opal_Buffer_Structure_End,
-//};
 
 class Renderer
 {

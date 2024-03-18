@@ -178,6 +178,7 @@ QuartzResult Render()
   QTZ_ATTEMPT(g_coreState.renderer.StartFrame());
 
   QTZ_ATTEMPT(RenderScene());
+  OpalWaitIdle();
   QTZ_ATTEMPT(RenderImgui());
 
   QTZ_ATTEMPT(g_coreState.renderer.EndFrame());
@@ -236,7 +237,7 @@ QuartzResult RenderImgui()
   ImGui::EndFrame();
   ImGui::Render();
   ImDrawData* drawData = ImGui::GetDrawData();
-  ImGui_ImplVulkan_RenderDrawData(drawData, OpalGetState()->api.vk.renderState.cmd);
+  ImGui_ImplVulkan_RenderDrawData(drawData, OpalGetState()->api.vk.renderState.curCmd);
   g_coreState.renderer.EndImguiRender();
 
   return Quartz_Success;

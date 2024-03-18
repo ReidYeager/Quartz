@@ -156,8 +156,8 @@ QuartzResult TextureSkybox::CreateDiffuse(const Mesh& screenQuadMesh)
   imageInfo.height = 128;
   imageInfo.width = imageInfo.height * ((float)extents.width / (float)extents.height);
   imageInfo.mipCount = 1;
-  // For :          Rendering to           | Use in pbr shaders
-  imageInfo.usage = Opal_Image_Usage_Color | Opal_Image_Usage_Uniform;
+  // For :          Rendering to            | Use in pbr shaders
+  imageInfo.usage = Opal_Image_Usage_Output | Opal_Image_Usage_Uniform;
   imageInfo.format = Opal_Format_RGBA32;
   imageInfo.filter = Opal_Image_Filter_Linear;
   imageInfo.sampleMode = Opal_Image_Sample_Clamp;
@@ -216,12 +216,15 @@ QuartzResult TextureSkybox::CreateDiffuse(const Mesh& screenQuadMesh)
 
   // Render ==============================
 
+  OpalWaitIdle();
   QTZ_ATTEMPT_OPAL(OpalRenderBegin());
   OpalRenderRenderpassBegin(&diffuseRenderpass, &diffuseFramebuffer);
   QTZ_ATTEMPT(diffuseMaterial.Bind());
   screenQuadMesh.Render();
   OpalRenderRenderpassEnd(&diffuseRenderpass);
-  QTZ_ATTEMPT_OPAL(OpalRenderEnd());
+  OpalSyncPack syncpack = {};
+  QTZ_ATTEMPT_OPAL(OpalRenderEnd(syncpack));
+  OpalWaitIdle();
 
   // Convert to texture ==============================
 
@@ -267,8 +270,8 @@ QuartzResult TextureSkybox::CreateSpecular(const Mesh& screenQuadMesh)
   imageInfo.height = 512;
   imageInfo.width = imageInfo.height * ((float)extents.width / (float)extents.height);
   imageInfo.mipCount = levelCount;
-  // For :          Rendering to           | Use in pbr shaders
-  imageInfo.usage = Opal_Image_Usage_Color | Opal_Image_Usage_Uniform;
+  // For :          Rendering to            | Use in pbr shaders
+  imageInfo.usage = Opal_Image_Usage_Output | Opal_Image_Usage_Uniform;
   imageInfo.format = Opal_Format_RGBA32;
   imageInfo.filter = Opal_Image_Filter_Linear;
   imageInfo.sampleMode = Opal_Image_Sample_Clamp;
@@ -353,6 +356,7 @@ QuartzResult TextureSkybox::CreateSpecular(const Mesh& screenQuadMesh)
 
   // Render ==============================
 
+  OpalWaitIdle();
   QTZ_ATTEMPT_OPAL(OpalRenderBegin());
 
   for (uint32_t i = 0; i < levelCount; i++)
@@ -382,7 +386,9 @@ QuartzResult TextureSkybox::CreateSpecular(const Mesh& screenQuadMesh)
 
     OpalRenderRenderpassEnd(&specularRenderpass);
   }
-  QTZ_ATTEMPT_OPAL(OpalRenderEnd());
+  OpalSyncPack syncpack = {};
+  QTZ_ATTEMPT_OPAL(OpalRenderEnd(syncpack));
+  OpalWaitIdle();
 
   // Convert to texture ==============================
 
@@ -423,8 +429,8 @@ QuartzResult TextureSkybox::CreateBrdf(const Mesh& screenQuadMesh)
   imageInfo.height = m_brdfSize;
   imageInfo.width = m_brdfSize;
   imageInfo.mipCount = 1;
-  // For :          Rendering to           | Use in pbr shaders
-  imageInfo.usage = Opal_Image_Usage_Color | Opal_Image_Usage_Uniform;
+  // For :          Rendering to            | Use in pbr shaders
+  imageInfo.usage = Opal_Image_Usage_Output | Opal_Image_Usage_Uniform;
   imageInfo.format = Opal_Format_RG16;
   imageInfo.filter = Opal_Image_Filter_Linear;
   imageInfo.sampleMode = Opal_Image_Sample_Clamp;
@@ -482,12 +488,15 @@ QuartzResult TextureSkybox::CreateBrdf(const Mesh& screenQuadMesh)
 
   // Render ==============================
 
+  OpalWaitIdle();
   QTZ_ATTEMPT_OPAL(OpalRenderBegin());
   OpalRenderRenderpassBegin(&brdfRenderpass, &brdfFramebuffer);
   QTZ_ATTEMPT(brdfMaterial.Bind());
   screenQuadMesh.Render();
   OpalRenderRenderpassEnd(&brdfRenderpass);
-  QTZ_ATTEMPT_OPAL(OpalRenderEnd());
+  OpalSyncPack syncpack = {};
+  QTZ_ATTEMPT_OPAL(OpalRenderEnd(syncpack));
+  OpalWaitIdle();
 
   // Convert to texture ==============================
 
